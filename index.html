@@ -1314,80 +1314,112 @@ function confirmarManual(modo) {
 }
 
 /* ============ PARSER OCR - FORMATO DO PEDIDO ============ */
+/* ============ PARSER OCR - VERSÃO CORRIGIDA ============ */
 function parseOCR(text) {
   var linhas = text.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
   var t = text.toUpperCase();
   var numero = '', data = '', codigo = '', cliente = '', endereco = '';
   
-  // 1. NÚMERO DO PEDIDO: "ABERTO NO 0000164381 - 18/06/2026"
-  var mNum = t.match(/ABERTO\s+NO?\s*[:#]?\s*([0-9]{6,})/);
-  if (mNum) numero = mNum[1];
-  else {
-    mNum = t.match(/PEDIDO\s*[:#]?\s*([0-9]{6,})/);
-    if (mNum) numero = mNum[1];
-    else {
-      mNum = t.match(/N[O°º]\s*[:#]?\s*([0-9]{6,})/);
-      if (mNum) numero = mNum[1];
-    }
+  // ========== 1. NÚMERO DO PEDIDO ==========
+  // Padrão: "ABERTO - No 0000164381 - 18/06/2026"
+  var mPedido = t.match(/(?:ABERTO|PEDIDO)\s*[-–]?\s*N[º°O]?\s*([0-9]{6,})/);
+  if (mPedido) {
+    // Pegar apenas os últimos 6-8 dígitos
+    var numCompleto = mPedido[1];
+    numero = numCompleto.slice(-8); // últimos 8 dígitos
   }
   
-  // 2. DATA DO PEDIDO: "18/06/2026"
+  // ========== 2. DATA DO PEDIDO ==========
   var mData = t.match(/(\d{2}\/\d{2}\/\d{4})/);
   if (mData) data = mData[1];
   
-  // 3. CÓDIGO DO CLIENTE: "583 - MUNHOZ ACESSORIOS..."
-  var mCod = t.match(/^(\d{2,5})\s*[-–]\s*(.+)/m);
-  if (mCod) {
-    codigo = mCod[1].trim();
-  } else {
-    mCod = t.match(/C[ÓO]D(IGO)?\s*[:#]?\s*([0-9]{2,})/);
-    if (mCod) codigo = mCod[2].trim();
-  }
+  // ========== 3. ENCONTRAR O CLIENTE CORRETO ==========
+  // Ignorar "RP ROLAMENTOS" (cabeçalho - você)
+  // Cliente está após "CUPOM SEM VALOR FISCAL"
   
-  // 4. NOME DO CLIENTE: linha após o código, ou "MUNHOZ ACESSORIOS PARA MOVEIS"
-  if (mCod && mCod[2]) {
-    cliente = mCod[2].trim().replace(/\s*LTDA\.?\s*$/i, '').trim();
-  }
-  // Buscar linha com nome de empresa (acessórios, materiais, etc)
-  if (!cliente) {
-    var mCli = t.match(/([A-Z][A-Z\s]+(?:ACESSORIOS|COMERCIO|DISTRIBUIDORA|INDUSTRIA|MOVEIS|ESTOFADOS)[A-Z\s]*)/);
-    if (mCli) cliente = mCli[1].trim().replace(/\s*LTDA\.?\s*$/i, '').trim();
-  }
-  // Fallback: pegar linha após o número do pedido
-  if (!cliente) {
-    for (var i = 0; i < linhas.length; i++) {
-      if (linhas[i].indexOf(numero) >= 0 && i + 1 < linhas.length) {
-        var nextLine = linhas[i + 1];
-        if (nextLine.match(/^\d+\s*[-–]/)) {
-          cliente = nextLine.replace(/^\d+\s*[-–]\s*/, '').replace(/\s*LTDA\.?\s*$/i, '').trim();
-          break;
-        }
+  var idxCupom = t.indexOf('CUPOM SEM VALOR FISCAL');
+  if (idxCupom >= 0) {
+    var textoAposCupom = text.substring(idxCupom);
+    var linhasAposCupom = textoAposCupom.split('\n').map(function(l) { 
+      return l.trim(); 
+    }).filter(function(l) { 
+      return l.length > 0 && l.length < 100; 
+    });
+    
+    // Primeira linha após cupom: "583 - MUNHOZ ACESSORIOS..."
+    if (linhasAposCupom.length > 0) {
+      var primeiraLinha = linhasAposCupom[0];
+      
+      // Extrair código do cliente (número antes do traço)
+      var mCod = primeiraLinha.match(/^(\d{2,5})\s*[-–]/);
+      if (mCod) {
+        codigo = mCod[1];
+        // Remover código e traço para pegar o nome
+        cliente = primeiraLinha.replace(/^\d{2,5}\s*[-–]\s*/, '').trim();
+      } else {
+        cliente = primeiraLinha;
+      }
+    }
+    
+    // ========== 4. CNPJ ==========
+    var mCnpj = textoAposCupom.match(/CNPJ[:\s]*([0-9.\-\/]{14,})/i);
+    if (mCnpj) {
+      // CNPJ encontrado, confirmar que é o cliente
+    }
+    
+    // ========== 5. I.E. ==========
+    var mIE = textoAposCupom.match(/I\.?E\.?[:\s]*([0-9.\-]{8,})/i);
+    var ie = mIE ? mIE[1] : '';
+    
+    // ========== 6. ENDEREÇO ==========
+    // Procurar por AVENIDA, RUA, etc após CNPJ/I.E.
+    var mEndereco = textoAposCupom.match(/(?:AVENIDA|RUA|ALAMEDA|ESTRADA|TRAVESSA)\s+[A-Z0-9\s,]+(?:\d{3,})/i);
+    if (mEndereco) {
+      endereco = mEndereco[0].trim();
+    }
+    
+    // ========== 7. COMPLEMENTO, CEP, CIDADE ==========
+    // Procurar CEP
+    var mCep = textoAposCupom.match(/CEP[:\s]*([0-9]{5}-?[0-9]{3})/i);
+    var cep = mCep ? mCep[1] : '';
+    
+    // Procurar cidade (linha com CEP ou após endereço)
+    var mCidade = textoAposCupom.match(/([A-Z\s]+)\s*[-–]\s*([A-Z]{2})\s*[-–]?\s*\(?(\d{2})\)?\s*[\d\-]{8,}/);
+    if (mCidade) {
+      var cidade = mCidade[1].trim();
+      var estado = mCidade[2].trim();
+      var telefone = mCidade[0].split(/[-–]/).pop().trim();
+      
+      // Completar endereço
+      if (endereco && cidade) {
+        endereco = endereco + ' / ' + cidade + ' - ' + estado;
+        if (cep) endereco += ' / CEP: ' + cep;
       }
     }
   }
   
-  // 5. ENDEREÇO: "AVENIDA NASSER MARGO, 2705" + linhas seguintes
-  var mEnd = t.match(/((?:AVENIDA|RUA|ALAMEDA|TRAVESSA|ESTRADA|AV)\s+[A-Z][A-Z0-9\s,]+(?:\d{3,}))/);
-  if (mEnd) {
-    endereco = mEnd[1].trim();
-    // Adicionar complemento (bairro, CEP, cidade)
-    var endIdx = text.indexOf(mEnd[1]);
-    var resto = text.substring(endIdx + mEnd[1].length);
-    var linhasResto = resto.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
-    for (var j = 0; j < Math.min(2, linhasResto.length); j++) {
-      var lr = linhasResto[j].trim();
-      if (lr.match(/^[A-Z0-9\s,.\-()]+$/)) {
-        endereco += ' / ' + lr;
-      }
-    }
-  }
-  
-  // Limpar cliente
+  // ========== LIMPEZA FINAL ==========
+  // Remover "LTDA", "ME", etc do final do cliente
   if (cliente) {
-    cliente = cliente.replace(/\s*LTDA\.?\s*$/i, '').replace(/\s*ME\s*$/i, '').trim();
+    cliente = cliente.replace(/\s*LTDA\.?\s*$/i, '')
+                     .replace(/\s*ME\s*$/i, '')
+                     .replace(/\s*EPP\s*$/i, '')
+                     .trim();
   }
   
-  return { numero: numero, data: data, codigo: codigo, cliente: cliente, endereco: endereco };
+  // Remover caracteres estranhos
+  cliente = cliente.replace(/[|]/g, '').trim();
+  endereco = endereco.replace(/[|]/g, '').trim();
+  
+  console.log('OCR Parseado:', { numero, data, codigo, cliente, endereco });
+  
+  return { 
+    numero: numero, 
+    data: data, 
+    codigo: codigo, 
+    cliente: cliente, 
+    endereco: endereco 
+  };
 }
 
 function confirmarPedido(modo, foto) {
