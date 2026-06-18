@@ -1315,103 +1315,110 @@ function confirmarManual(modo) {
 
 /* ============ PARSER OCR - FORMATO DO PEDIDO ============ */
 /* ============ PARSER OCR - VERSÃO CORRIGIDA ============ */
+/* ============ PARSER OCR - TOLERANTE A ERROS ============ */
 function parseOCR(text) {
   var linhas = text.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
   var t = text.toUpperCase();
   var numero = '', data = '', codigo = '', cliente = '', endereco = '';
   
   // ========== 1. NÚMERO DO PEDIDO ==========
-  // Padrão: "ABERTO - No 0000164381 - 18/06/2026"
-  var mPedido = t.match(/(?:ABERTO|PEDIDO)\s*[-–]?\s*N[º°O]?\s*([0-9]{6,})/);
+  // Busca padrão flexível: "ABERIO - No 0000164381 - 18/06/2026"
+  // Tolerante a: ABERIO/ABERTO/ABERT0, No/Nº/N0/NO
+  var mPedido = t.match(/(?:ABERIO|ABERTO|ABERT0|PEDIDO)\s*[-–]?\s*N[O0º°]?\s*([0-9]{6,})/);
   if (mPedido) {
-    // Pegar apenas os últimos 6-8 dígitos
-    var numCompleto = mPedido[1];
-    numero = numCompleto.slice(-8); // últimos 8 dígitos
+    numero = mPedido[1].slice(-8); // últimos 8 dígitos
+  }
+  // Fallback: qualquer sequência de 6+ dígitos após "NO" ou "Nº"
+  if (!numero) {
+    var mFallback = t.match(/N[O0º°]\s*([0-9]{6,})/);
+    if (mFallback) numero = mFallback[1].slice(-8);
   }
   
   // ========== 2. DATA DO PEDIDO ==========
   var mData = t.match(/(\d{2}\/\d{2}\/\d{4})/);
   if (mData) data = mData[1];
   
-  // ========== 3. ENCONTRAR O CLIENTE CORRETO ==========
-  // Ignorar "RP ROLAMENTOS" (cabeçalho - você)
-  // Cliente está após "CUPOM SEM VALOR FISCAL"
+  // ========== 3. ENCONTRAR O CLIENTE ==========
+  // Estrutura: após "PEDIDO" e a linha da data, vem o cliente
+  // Padrão: "563 - MUNHOZ ACESSORIOS PARA ESTOFADOS"
+  // Tolerante a: GUPOM/CUPOM, traço normal ou hífen
   
-  var idxCupom = t.indexOf('CUPOM SEM VALOR FISCAL');
-  if (idxCupom >= 0) {
-    var textoAposCupom = text.substring(idxCupom);
-    var linhasAposCupom = textoAposCupom.split('\n').map(function(l) { 
-      return l.trim(); 
-    }).filter(function(l) { 
-      return l.length > 0 && l.length < 100; 
-    });
-    
-    // Primeira linha após cupom: "583 - MUNHOZ ACESSORIOS..."
-    if (linhasAposCupom.length > 0) {
-      var primeiraLinha = linhasAposCupom[0];
-      
-      // Extrair código do cliente (número antes do traço)
-      var mCod = primeiraLinha.match(/^(\d{2,5})\s*[-–]/);
-      if (mCod) {
-        codigo = mCod[1];
-        // Remover código e traço para pegar o nome
-        cliente = primeiraLinha.replace(/^\d{2,5}\s*[-–]\s*/, '').trim();
-      } else {
-        cliente = primeiraLinha;
+  // Procurar linha com padrão: NÚMERO - NOME DO CLIENTE
+  // Ex: "563 - MUNHOZ ACESSORIOS PARA ESTOFADOS"
+  // ou "563 — MUNHOZ..." (traço longo)
+  for (var i = 0; i < linhas.length; i++) {
+    var linha = linhas[i].toUpperCase();
+    // Procura linha que começa com números seguidos de traço
+    var mCliente = linha.match(/^(\d{2,5})\s*[-–—]\s*(.+)/);
+    if (mCliente) {
+      codigo = mCliente[1];
+      cliente = mCliente[2].trim();
+      // Remover LTDA/LIDA/ME do final (pode estar quebrado)
+      cliente = cliente.replace(/\s*(?:LTDA|LIDA|ME|EPP)\s*$/i, '').trim();
+      break;
+    }
+  }
+  
+  // Se não achou pelo padrão acima, procurar após "GUPOM" ou "CUPOM"
+  if (!cliente) {
+    for (var i = 0; i < linhas.length; i++) {
+      if (linhas[i].toUpperCase().match(/(?:GUPOM|CUPOM|CUP0M)\s+SEM\s+VALOR/)) {
+        // Próxima linha não vazia é o cliente
+        for (var j = i + 1; j < linhas.length; j++) {
+          if (linhas[j].trim().length > 0) {
+            var mCod2 = linhas[j].match(/^(\d{2,5})\s*[-–]\s*(.+)/);
+            if (mCod2) {
+              codigo = mCod2[1];
+              cliente = mCod2[2].trim().replace(/\s*(?:LTDA|LIDA|ME)\s*$/i, '').trim();
+            } else {
+              cliente = linhas[j].trim();
+            }
+            break;
+          }
+        }
+        break;
       }
     }
-    
-    // ========== 4. CNPJ ==========
-    var mCnpj = textoAposCupom.match(/CNPJ[:\s]*([0-9.\-\/]{14,})/i);
-    if (mCnpj) {
-      // CNPJ encontrado, confirmar que é o cliente
-    }
-    
-    // ========== 5. I.E. ==========
-    var mIE = textoAposCupom.match(/I\.?E\.?[:\s]*([0-9.\-]{8,})/i);
-    var ie = mIE ? mIE[1] : '';
-    
-    // ========== 6. ENDEREÇO ==========
-    // Procurar por AVENIDA, RUA, etc após CNPJ/I.E.
-    var mEndereco = textoAposCupom.match(/(?:AVENIDA|RUA|ALAMEDA|ESTRADA|TRAVESSA)\s+[A-Z0-9\s,]+(?:\d{3,})/i);
-    if (mEndereco) {
-      endereco = mEndereco[0].trim();
-    }
-    
-    // ========== 7. COMPLEMENTO, CEP, CIDADE ==========
-    // Procurar CEP
-    var mCep = textoAposCupom.match(/CEP[:\s]*([0-9]{5}-?[0-9]{3})/i);
-    var cep = mCep ? mCep[1] : '';
-    
-    // Procurar cidade (linha com CEP ou após endereço)
-    var mCidade = textoAposCupom.match(/([A-Z\s]+)\s*[-–]\s*([A-Z]{2})\s*[-–]?\s*\(?(\d{2})\)?\s*[\d\-]{8,}/);
-    if (mCidade) {
-      var cidade = mCidade[1].trim();
-      var estado = mCidade[2].trim();
-      var telefone = mCidade[0].split(/[-–]/).pop().trim();
-      
-      // Completar endereço
-      if (endereco && cidade) {
-        endereco = endereco + ' / ' + cidade + ' - ' + estado;
-        if (cep) endereco += ' / CEP: ' + cep;
-      }
-    }
+  }
+  
+  // ========== 4. ENDEREÇO ==========
+  // Tolerante a: AVENTIDA/AVENIDA/AVENIDA/AV
+  var mEndereco = t.match(/(?:AVENTIDA|AVENIDA|AVENI0A|AV\s)\s+([A-Z0-9\s,]+(?:\d{3,}))/);
+  if (mEndereco) {
+    endereco = mEndereco[0].trim();
+    // Limpar caracteres estranhos
+    endereco = endereco.replace(/[|]/g, '').trim();
+  }
+  
+  // ========== 5. COMPLEMENTAR ENDEREÇO COM CIDADE ==========
+  // Procurar linha com cidade - estado
+  // Ex: "VOTUPORANGA - SP - (17) 3421-5328"
+  var mCidade = t.match(/([A-ZÁÉÍÓÚÂÊÔÃÕÇ\s]{3,})\s*[-–]\s*([A-Z]{2})\s*[-–]?\s*\(?\d{2}\)?\s*[\d\-]{7,}/);
+  if (mCidade && endereco) {
+    var cidade = mCidade[1].trim();
+    var estado = mCidade[2].trim();
+    endereco = endereco + ' / ' + cidade + ' - ' + estado;
+  }
+  
+  // ========== 6. CEP ==========
+  var mCep = t.match(/CEP[:\s]*([0-9]{5}-?[0-9]{3})/);
+  if (mCep && endereco) {
+    endereco += ' / CEP: ' + mCep[1];
   }
   
   // ========== LIMPEZA FINAL ==========
-  // Remover "LTDA", "ME", etc do final do cliente
   if (cliente) {
     cliente = cliente.replace(/\s*LTDA\.?\s*$/i, '')
+                     .replace(/\s*LIDA\.?\s*$/i, '')
                      .replace(/\s*ME\s*$/i, '')
                      .replace(/\s*EPP\s*$/i, '')
+                     .replace(/[|]/g, '')
                      .trim();
   }
   
-  // Remover caracteres estranhos
-  cliente = cliente.replace(/[|]/g, '').trim();
   endereco = endereco.replace(/[|]/g, '').trim();
   
-  console.log('OCR Parseado:', { numero, data, codigo, cliente, endereco });
+  console.log('OCR Parseado:', { numero: numero, data: data, codigo: codigo, cliente: cliente, endereco: endereco });
   
   return { 
     numero: numero, 
@@ -1421,7 +1428,6 @@ function parseOCR(text) {
     endereco: endereco 
   };
 }
-
 function confirmarPedido(modo, foto) {
   var numero = document.getElementById('ocrNum').value.trim();
   var dataPed = document.getElementById('ocrData').value.trim();
