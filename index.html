@@ -10,6 +10,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- Leaflet Maps -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 :root {
   --bg: #f4f6fa;
@@ -190,6 +193,74 @@ tr:hover { background: var(--surface-2); }
 .ocr-progress-bar { height: 100%; background: var(--primary); transition: width 0.3s; border-radius: 8px; }
 .ocr-status { margin-top: 8px; text-align: center; color: var(--text-soft); font-size: 13px; font-weight: 700; flex-shrink: 0; }
 
+/* MAPA */
+.map-container {
+  width: 100%;
+  height: 400px;
+  border-radius: var(--radius);
+  margin-bottom: 20px;
+  z-index: 1;
+}
+.route-info {
+  background: var(--surface-2);
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+}
+.route-info .stat {
+  display: inline-block;
+  margin-right: 20px;
+  font-size: 14px;
+}
+.route-info .stat b {
+  color: var(--primary);
+  font-size: 18px;
+}
+.pedido-rota-item {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  background: var(--surface);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  border-left: 4px solid var(--primary);
+}
+.pedido-rota-item .numero {
+  font-weight: 800;
+  color: var(--primary);
+  margin-right: 15px;
+  min-width: 80px;
+}
+.pedido-rota-item .info { flex: 1; }
+.pedido-rota-item .cliente { font-size: 14px; color: var(--text-soft); }
+.pedido-rota-item .distancia {
+  font-size: 12px;
+  color: var(--text-soft);
+  margin-left: 10px;
+}
+.tracking-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background: var(--success);
+  color: white;
+  border-radius: 8px;
+  margin-bottom: 15px;
+}
+.tracking-status.inactive { background: var(--text-soft); }
+.tracking-dot {
+  width: 12px;
+  height: 12px;
+  background: white;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
 /* TOAST */
 .toast-container { position: fixed; top: 20px; right: 20px; z-index: 2000; }
 .toast { background: var(--surface); padding: 15px 20px; border-radius: 8px; box-shadow: var(--shadow); margin-bottom: 10px; border-left: 4px solid var(--primary); min-width: 250px; font-weight: 700; animation: slideIn 0.3s; font-size: 14px; }
@@ -200,8 +271,8 @@ tr:hover { background: var(--surface-2); }
 
 /* RESPONSIVO */
 @media (max-width: 968px) { .dashboard-grid { grid-template-columns: 1fr; } .stats-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 768px) { .sidebar { transform: translateX(-100%); width: 260px; } .sidebar.open { transform: translateX(0); } .main { margin-left: 0; padding: 12px; width: 100%; } .menu-toggle { display: block; } .topbar { padding: 12px 15px; margin-bottom: 15px; } .topbar h1 { font-size: 17px; } .card { padding: 15px; margin-bottom: 15px; } .card-title { font-size: 16px; margin-bottom: 12px; } .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; } .stat-card { padding: 15px 12px; } .stat-card .value { font-size: 24px; } .stat-card .label { font-size: 11px; } .filters { grid-template-columns: 1fr; gap: 8px; } table { font-size: 13px; min-width: 500px; } th, td { padding: 10px 8px; font-size: 12px; } .btn { padding: 12px 16px; font-size: 15px; min-height: 44px; } .btn-sm { padding: 8px 12px; font-size: 13px; min-height: 38px; } .camera-container { height: 60vh; } .btn-capture { width: 64px; height: 64px; font-size: 28px; } }
-@media (max-width: 480px) { .login-box { padding: 25px 18px; } .login-box h1 { font-size: 20px; } .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; } .stat-card { padding: 12px 10px; } .stat-card .value { font-size: 22px; } table { font-size: 11px; min-width: 450px; } th, td { padding: 8px 6px; font-size: 11px; } .form-group input, .form-group select, .form-group textarea { font-size: 14px; padding: 10px 12px; } .camera-container { height: 65vh; border-radius: 8px; } .btn-capture { width: 60px; height: 60px; font-size: 26px; } .btn-cancel-cam { padding: 10px 16px; font-size: 13px; } }
+@media (max-width: 768px) { .sidebar { transform: translateX(-100%); width: 260px; } .sidebar.open { transform: translateX(0); } .main { margin-left: 0; padding: 12px; width: 100%; } .menu-toggle { display: block; } .topbar { padding: 12px 15px; margin-bottom: 15px; } .topbar h1 { font-size: 17px; } .card { padding: 15px; margin-bottom: 15px; } .card-title { font-size: 16px; margin-bottom: 12px; } .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; } .stat-card { padding: 15px 12px; } .stat-card .value { font-size: 24px; } .stat-card .label { font-size: 11px; } .filters { grid-template-columns: 1fr; gap: 8px; } table { font-size: 13px; min-width: 500px; } th, td { padding: 10px 8px; font-size: 12px; } .btn { padding: 12px 16px; font-size: 15px; min-height: 44px; } .btn-sm { padding: 8px 12px; font-size: 13px; min-height: 38px; } .camera-container { height: 60vh; } .btn-capture { width: 64px; height: 64px; font-size: 28px; } .map-container { height: 300px; } }
+@media (max-width: 480px) { .login-box { padding: 25px 18px; } .login-box h1 { font-size: 20px; } .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; } .stat-card { padding: 12px 10px; } .stat-card .value { font-size: 22px; } table { font-size: 11px; min-width: 450px; } th, td { padding: 8px 6px; font-size: 11px; } .form-group input, .form-group select, .form-group textarea { font-size: 14px; padding: 10px 12px; } .camera-container { height: 65vh; border-radius: 8px; } .btn-capture { width: 60px; height: 60px; font-size: 26px; } .btn-cancel-cam { padding: 10px 16px; font-size: 13px; } .map-container { height: 250px; } }
 @media (max-width: 896px) and (orientation: landscape) { .modal { max-height: 98vh; padding: 8px; } .camera-container { height: 75vh; } .main { padding: 10px; } .card { padding: 12px; margin-bottom: 12px; } }
 @media (max-width: 768px) { .modal-overlay.camera-modal { padding: 0; align-items: stretch; } .modal-overlay.camera-modal .modal { margin: 0; max-width: 100%; max-height: 100vh; height: 100vh; border-radius: 0; padding: 10px; display: flex; flex-direction: column; } .modal-overlay.camera-modal .modal h2 { font-size: 16px; margin-bottom: 8px; flex-shrink: 0; } .modal-overlay.camera-modal .camera-wrapper { flex: 1; min-height: 0; } .modal-overlay.camera-modal .camera-container { height: 100%; flex: 1; border-radius: 8px; } }
 @media (max-width: 480px) { .modal-overlay.camera-modal .modal { padding: 6px; } .modal-overlay.camera-modal .modal h2 { font-size: 14px; margin-bottom: 6px; } }
@@ -245,7 +316,7 @@ tr:hover { background: var(--surface-2); }
 
 <script>
 /* ============ ESTADO ============ */
-const DB_KEY = 'sep_entrega_db_v8';
+const DB_KEY = 'sep_entrega_db_v9';
 let db = {
   users: [
     { id: 1, login: 'admin', pass: 'admin', nome: 'Administrador', funcao: 'admin', ativo: true },
@@ -255,13 +326,24 @@ let db = {
   ],
   funcionarios: [],
   pedidos: [],
-  logs: []
+  logs: [],
+  tracking: {
+    active: false,
+    entregadorId: null,
+    currentPosition: null,
+    lastUpdate: null
+  }
 };
 let currentUser = null;
 let currentView = 'dashboard';
 let cameraStream = null;
 let currentCameraModo = null;
 let zxingCodeReader = null;
+let map = null;
+let routeMarkers = [];
+let deliveryPolyline = null;
+let trackingInterval = null;
+let userMarker = null;
 
 function loadDB() {
   const saved = localStorage.getItem(DB_KEY);
@@ -290,6 +372,7 @@ function doLogin() {
   initApp();
 }
 function doLogout() {
+  stopTracking();
   currentUser = null;
   sessionStorage.removeItem('currentUser');
   document.getElementById('appScreen').classList.add('hidden');
@@ -318,7 +401,7 @@ function buildNav() {
     { id: 'dashboard', icon: '', label: 'Dashboard' },
     { id: 'separacao', icon: '', label: 'Separação' },
     { id: 'entregas', icon: '', label: 'Entregas' },
-    { id: 'historico', icon: '', label: 'Histórico' }
+    { id: 'roteirizacao', icon: '', label: 'Roteirização' }
   ];
   if (currentUser.funcao === 'admin') {
     items.push({ id: 'funcionarios', icon: '👥', label: 'Funcionários' });
@@ -341,9 +424,9 @@ function navigate(view) {
 }
 
 function renderView() {
-  const titles = { dashboard: 'Dashboard', separacao: 'Tela de Separação', entregas: 'Tela de Entregas', historico: 'Histórico de Pedidos', funcionarios: 'Cadastro de Funcionários', usuarios: 'Cadastro de Usuários', relatorios: 'Relatórios' };
+  const titles = { dashboard: 'Dashboard', separacao: 'Tela de Separação', entregas: 'Tela de Entregas', roteirizacao: 'Roteirização', funcionarios: 'Cadastro de Funcionários', usuarios: 'Cadastro de Usuários', relatorios: 'Relatórios' };
   document.getElementById('pageTitle').textContent = titles[currentView] || '';
-  var fn = { dashboard: renderDashboard, separacao: renderSeparacao, entregas: renderEntregas, historico: renderHistorico, funcionarios: renderFuncionarios, usuarios: renderUsuarios, relatorios: renderRelatorios };
+  var fn = { dashboard: renderDashboard, separacao: renderSeparacao, entregas: renderEntregas, roteirizacao: renderRoteirizacao, funcionarios: renderFuncionarios, usuarios: renderUsuarios, relatorios: renderRelatorios };
   if (fn[currentView]) fn[currentView]();
 }
 
@@ -439,14 +522,283 @@ function confirmarRetiradaPedidos() {
   saveDB(); toast(count + ' pedido(s) retirado(s) com sucesso', 'success'); renderEntregas();
 }
 function renderListaEntregas() {
-  var lista = db.pedidos.filter(function(p) { return p.status === 'EM_ENTREGA'; });
-  var html = '<div class="table-wrap"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Endereço</th><th>Retirada</th><th>Entregador</th><th>Status</th><th>Ações</th></tr></thead><tbody>' +
-    (lista.length ? lista.map(function(p) { return '<tr><td>' + p.numero + '</td><td>' + p.cliente + '</td><td>' + (p.endereco || '-') + '</td><td>' + formatDT(p.dataRetirada) + '</td><td>' + p.entregador + '</td><td><span class="badge badge-em-entrega">EM ENTREGA</span></td><td><button class="btn btn-sm" onclick="verFotos(' + p.id + ')">📷</button> <button class="btn btn-sm btn-success" onclick="marcarEntregue(' + p.id + ')">✓</button> <button class="btn btn-sm btn-danger" onclick="marcarProblema(' + p.id + ')">!</button></td></tr>'; }).join('') : '<tr><td colspan="7" style="text-align:center; padding: 30px;">Nenhum pedido em entrega</td></tr>') +
+  var lista = db.pedidos.filter(function(p) { return p.status === 'EM_ENTREGA' && p.entregadorId === currentUser.id; });
+  var html = '<div class="table-wrap"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Endereço</th><th>Retirada</th><th>Status</th><th>Ações</th></tr></thead><tbody>' +
+    (lista.length ? lista.map(function(p) { return '<tr><td>' + p.numero + '</td><td>' + p.cliente + '</td><td>' + (p.endereco || '-') + '</td><td>' + formatDT(p.dataRetirada) + '</td><td><span class="badge badge-em-entrega">EM ENTREGA</span></td><td><button class="btn btn-sm btn-success" onclick="marcarEntregue(' + p.id + ')">✓</button> <button class="btn btn-sm btn-danger" onclick="marcarProblema(' + p.id + ')">!</button></td></tr>'; }).join('') : '<tr><td colspan="6" style="text-align:center; padding: 30px;">Nenhum pedido em entrega</td></tr>') +
     '</tbody></table></div>';
   document.getElementById('listaEntregas').innerHTML = html;
 }
 function marcarEntregue(id) { var p = db.pedidos.find(function(x) { return x.id === id; }); if (!p) return; p.status = 'ENTREGUE'; p.dataEntrega = new Date().toISOString(); saveDB(); toast('Pedido marcado como ENTREGUE', 'success'); renderListaEntregas(); }
 function marcarProblema(id) { var p = db.pedidos.find(function(x) { return x.id === id; }); if (!p) return; var motivo = prompt('Descreva o problema na entrega:'); if (!motivo) return; p.status = 'PROBLEMA'; p.motivoProblema = motivo; p.dataProblema = new Date().toISOString(); saveDB(); toast('Problema registrado', 'warning'); renderListaEntregas(); }
+
+/* ============ ROTEIRIZAÇÃO COM MAPA ============ */
+function renderRoteirizacao() {
+  if (currentUser.funcao !== 'entregador' && currentUser.funcao !== 'admin') { navigate('dashboard'); return; }
+  
+  var c = document.getElementById('content');
+  c.innerHTML = 
+    '<div class="card">' +
+      '<h3 class="card-title">🗺️ Roteirização de Entregas</h3>' +
+      '<div id="map" class="map-container"></div>' +
+      '<div id="routeInfo"></div>' +
+      '<div id="trackingControls"></div>' +
+    '</div>';
+  
+  // Inicializar mapa após renderização
+  setTimeout(function() { initMap(); }, 100);
+}
+
+function initMap() {
+  // Criar mapa centrado em São Paulo (padrão)
+  map = L.map('map').setView([-23.5505, -46.6333], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+  
+  renderRouteInfo();
+  renderTrackingControls();
+}
+
+async function renderRouteInfo() {
+  var pedidosEntrega = db.pedidos.filter(function(p) { 
+    return p.status === 'EM_ENTREGA' && p.entregadorId === currentUser.id; 
+  });
+  
+  if (!pedidosEntrega.length) {
+    document.getElementById('routeInfo').innerHTML = '<p style="color:var(--text-soft); text-align:center; padding:40px;">Nenhum pedido em entrega</p>';
+    return;
+  }
+  
+  // Geocodificar endereços
+  var geocodedPedidos = [];
+  for (var i = 0; i < pedidosEntrega.length; i++) {
+    var p = pedidosEntrega[i];
+    if (!p.latitude || !p.longitude) {
+      var coords = await geocodeAddress(p.endereco);
+      if (coords) {
+        p.latitude = coords.lat;
+        p.longitude = coords.lon;
+      }
+    }
+    if (p.latitude && p.longitude) {
+      geocodedPedidos.push(p);
+    }
+  }
+  
+  if (!geocodedPedidos.length) {
+    document.getElementById('routeInfo').innerHTML = '<p style="color:var(--text-soft); text-align:center;">Não foi possível geocodificar os endereços. Verifique se os endereços estão completos.</p>';
+    return;
+  }
+  
+  // Otimizar rota (algoritmo do vizinho mais próximo)
+  var optimizedRoute = optimizeRoute(geocodedPedidos);
+  
+  // Calcular distância total
+  var totalDistancia = 0;
+  for (var i = 0; i < optimizedRoute.length - 1; i++) {
+    totalDistancia += calculateDistance(
+      optimizedRoute[i].latitude, optimizedRoute[i].longitude,
+      optimizedRoute[i+1].latitude, optimizedRoute[i+1].longitude
+    );
+  }
+  
+  // Mostrar info
+  var html = '<div class="route-info">' +
+    '<div class="stat"><b>' + optimizedRoute.length + '</b> pedidos</div>' +
+    '<div class="stat"><b>' + totalDistancia.toFixed(1) + '</b> km totais</div>' +
+    '<div class="stat"><b>' + (optimizedRoute.length * 5 + totalDistancia * 2).toFixed(0) + '</b> min estimadas</div>' +
+  '</div>';
+  
+  html += '<h4 style="margin-bottom:10px;">Rota Otimizada:</h4>';
+  optimizedRoute.forEach(function(p, idx) {
+    html += '<div class="pedido-rota-item">' +
+      '<div class="numero">#' + (idx + 1) + ' - ' + p.numero + '</div>' +
+      '<div class="info">' +
+        '<div><b>' + p.cliente + '</b></div>' +
+        '<div class="cliente">' + p.endereco + '</div>' +
+      '</div>' +
+    '</div>';
+  });
+  
+  html += '<button class="btn btn-success btn-block" onclick="startTracking()" style="margin-top:15px;">🚀 Iniciar Rastreamento</button>';
+  
+  document.getElementById('routeInfo').innerHTML = html;
+  
+  // Mostrar marcadores no mapa
+  showRouteOnMap(optimizedRoute);
+}
+
+async function geocodeAddress(address) {
+  try {
+    var response = await fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(address) + '&limit=1');
+    var data = await response.json();
+    if (data && data.length > 0) {
+      return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+    }
+  } catch (e) {
+    console.error('Erro geocodificação:', e);
+  }
+  return null;
+}
+
+function optimizeRoute(pedidos) {
+  if (pedidos.length <= 1) return pedidos;
+  
+  // Algoritmo do vizinho mais próximo
+  var optimized = [pedidos[0]];
+  var remaining = pedidos.slice(1);
+  
+  while (remaining.length > 0) {
+    var last = optimized[optimized.length - 1];
+    var nearestIdx = 0;
+    var nearestDist = Infinity;
+    
+    for (var i = 0; i < remaining.length; i++) {
+      var dist = calculateDistance(last.latitude, last.longitude, remaining[i].latitude, remaining[i].longitude);
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearestIdx = i;
+      }
+    }
+    
+    optimized.push(remaining[nearestIdx]);
+    remaining.splice(nearestIdx, 1);
+  }
+  
+  return optimized;
+}
+
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  var R = 6371; // km
+  var dLat = (lat2 - lat1) * Math.PI / 180;
+  var dLon = (lon2 - lon1) * Math.PI / 180;
+  var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+          Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+          Math.sin(dLon/2) * Math.sin(dLon/2);
+  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+function showRouteOnMap(pedidos) {
+  // Limpar marcadores antigos
+  routeMarkers.forEach(function(m) { map.removeLayer(m); });
+  routeMarkers = [];
+  if (deliveryPolyline) map.removeLayer(deliveryPolyline);
+  
+  // Adicionar marcadores
+  var latlngs = [];
+  pedidos.forEach(function(p, idx) {
+    var marker = L.marker([p.latitude, p.longitude])
+      .addTo(map)
+      .bindPopup('<b>Pedido ' + p.numero + '</b><br>' + p.cliente + '<br>' + (idx + 1) + 'º da rota');
+    routeMarkers.push(marker);
+    latlngs.push([p.latitude, p.longitude]);
+  });
+  
+  // Desenhar linha da rota
+  if (latlngs.length > 1) {
+    deliveryPolyline = L.polyline(latlngs, {color: '#2563eb', weight: 4, opacity: 0.7}).addTo(map);
+    map.fitBounds(deliveryPolyline.getBounds(), {padding: [50, 50]});
+  } else if (latlngs.length === 1) {
+    map.setView(latlngs[0], 15);
+  }
+}
+
+function renderTrackingControls() {
+  var isTracking = db.tracking.active && db.tracking.entregadorId === currentUser.id;
+  var html = '';
+  
+  if (isTracking) {
+    html = '<div class="tracking-status">' +
+      '<div class="tracking-dot"></div>' +
+      '<div><b>Rastreamento Ativo</b><br>Atualizado: ' + (db.tracking.lastUpdate ? new Date(db.tracking.lastUpdate).toLocaleTimeString() : 'Agora') + '</div>' +
+    '</div>' +
+    '<button class="btn btn-danger btn-block" onclick="stopTracking()">⏹️ Parar Rastreamento</button>';
+  } else {
+    html = '<div class="tracking-status inactive">' +
+      '<div>Rastreamento inativo</div>' +
+    '</div>';
+  }
+  
+  document.getElementById('trackingControls').innerHTML = html;
+}
+
+function startTracking() {
+  db.tracking.active = true;
+  db.tracking.entregadorId = currentUser.id;
+  db.tracking.lastUpdate = new Date().toISOString();
+  saveDB();
+  
+  // Solicitar permissão de geolocalização
+  if (navigator.geolocation) {
+    trackingInterval = setInterval(updateTrackingPosition, 5000); // Atualizar a cada 5 segundos
+    updateTrackingPosition();
+    toast('Rastreamento iniciado!', 'success');
+    renderTrackingControls();
+  } else {
+    toast('Geolocalização não suportada pelo navegador', 'error');
+  }
+}
+
+function stopTracking() {
+  db.tracking.active = false;
+  db.tracking.entregadorId = null;
+  db.tracking.currentPosition = null;
+  saveDB();
+  
+  if (trackingInterval) {
+    clearInterval(trackingInterval);
+    trackingInterval = null;
+  }
+  
+  if (userMarker) {
+    map.removeLayer(userMarker);
+    userMarker = null;
+  }
+  
+  toast('Rastreamento parado', 'warning');
+  renderTrackingControls();
+}
+
+function updateTrackingPosition() {
+  if (!navigator.geolocation) return;
+  
+  navigator.geolocation.getCurrentPosition(function(position) {
+    var lat = position.coords.latitude;
+    var lon = position.coords.longitude;
+    
+    db.tracking.currentPosition = { lat: lat, lon: lon };
+    db.tracking.lastUpdate = new Date().toISOString();
+    saveDB();
+    
+    // Atualizar marcador no mapa
+    if (map) {
+      if (userMarker) {
+        userMarker.setLatLng([lat, lon]);
+      } else {
+        userMarker = L.marker([lat, lon], {
+          icon: L.divIcon({
+            className: 'custom-div-icon',
+            html: '<div style="background-color:#16a34a;width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);"></div>',
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+          })
+        }).addTo(map).bindPopup('📍 Sua posição');
+      }
+      
+      // Centralizar mapa na posição atual
+      map.setView([lat, lon], map.getZoom());
+    }
+    
+    renderTrackingControls();
+  }, function(error) {
+    console.error('Erro geolocalização:', error);
+  }, {
+    enableHighAccuracy: true,
+    timeout: 10000,
+    maximumAge: 0
+  });
+}
 
 /* ============ HISTÓRICO ============ */
 function renderHistorico() {
@@ -656,7 +1008,6 @@ async function capturePhoto(modo) {
   if (camControls) camControls.style.display = 'none';
   
   try {
-    // Processar OCR e Código de Barras em paralelo
     var ocrResult = await Tesseract.recognize(foto, 'por', {
       logger: function(m) {
         if (m.status === 'recognizing text') {
@@ -668,12 +1019,9 @@ async function capturePhoto(modo) {
       }
     });
     
-    // Ler código de barras
     var barcodeResult = null;
     try {
-      if (!zxingCodeReader) {
-        zxingCodeReader = new ZXing.BrowserMultiFormatReader();
-      }
+      if (!zxingCodeReader) zxingCodeReader = new ZXing.BrowserMultiFormatReader();
       var tempImg = new Image();
       tempImg.src = foto;
       await new Promise(function(resolve) { tempImg.onload = resolve; });
@@ -691,7 +1039,6 @@ async function capturePhoto(modo) {
     console.log('OCR Texto:', text);
     var dados = parseOCR(text);
     
-    // VALIDAÇÃO: Comparar número do pedido com código de barras
     if (barcodeResult && barcodeResult.text) {
       var barcodeNumero = barcodeResult.text.replace(/[^0-9]/g, '').slice(-8);
       var ocrNumero = dados.numero ? dados.numero.replace(/[^0-9]/g, '').slice(-8) : '';
@@ -699,12 +1046,10 @@ async function capturePhoto(modo) {
       console.log('Validação - OCR:', ocrNumero, 'vs Código de Barras:', barcodeNumero);
       
       if (ocrNumero && barcodeNumero && ocrNumero !== barcodeNumero) {
-        // Divergência! Pedir para escanear só o código de barras
         if (statusEl) statusEl.textContent = '⚠️ Divergência detectada! Escaneie o código de barras...';
         await scanBarcodeOnly(foto, dados, modo);
         return;
       } else if (barcodeNumero && !ocrNumero) {
-        // OCR não pegou, mas código de barras pegou
         dados.numero = barcodeNumero;
         toast('Número do pedido obtido do código de barras', 'success');
       } else if (ocrNumero === barcodeNumero) {
@@ -723,7 +1068,6 @@ async function capturePhoto(modo) {
   }
 }
 
-/* ============ ESCANEAR SÓ CÓDIGO DE BARRAS ============ */
 async function scanBarcodeOnly(fotoOriginal, dadosOCR, modo) {
   return new Promise(function(resolve) {
     showModal('<h2>📊 Escanear Código de Barras</h2><p style="margin-bottom:15px; font-size:14px; color:var(--text-soft);">O número do pedido do OCR diverge do código de barras. Por favor, escaneie o código de barras para corrigir.</p>' +
@@ -737,7 +1081,6 @@ async function scanBarcodeOnly(fotoOriginal, dadosOCR, modo) {
       '</div>'
     );
     
-    var modal = document.querySelector('.modal-overlay');
     var video = document.getElementById('barcodeVideo');
     
     navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } })
@@ -754,11 +1097,9 @@ async function scanBarcodeOnly(fotoOriginal, dadosOCR, modo) {
               stream.getTracks().forEach(function(t) { t.stop(); });
               closeModal();
               
-              // Atualizar número do pedido
               dadosOCR.numero = barcodeNum;
               toast('Número do pedido corrigido: ' + barcodeNum, 'success');
               
-              // Mostrar confirmação
               showModal('<h2>Confirmar Dados do Pedido</h2><img src="' + fotoOriginal + '" style="width:100%; max-height:200px; object-fit:contain; border-radius:8px; margin-bottom:15px;"><div class="form-group"><label>Número do Pedido <span style="color:var(--success);">(✓ Código de Barras)</span></label><input id="ocrNum" value="' + dadosOCR.numero + '"></div><div class="form-group"><label>Data do Pedido</label><input id="ocrData" value="' + dadosOCR.data + '"></div><div class="form-group"><label>Código do Cliente</label><input id="ocrCod" value="' + dadosOCR.codigo + '"></div><div class="form-group"><label>Nome do Cliente</label><input id="ocrCli" value="' + dadosOCR.cliente + '"></div><div class="form-group"><label>Endereço</label><textarea id="ocrEnd" rows="3">' + dadosOCR.endereco + '</textarea></div><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-success" onclick="confirmarPedido(\'' + modo + '\', \'' + fotoOriginal.replace(/'/g, "\\'") + '\')">✓ Confirmar</button></div>');
             }
           });
