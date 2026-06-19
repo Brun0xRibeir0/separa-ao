@@ -391,16 +391,17 @@ tr:hover { background: var(--surface-2); }
   font-size: 14px;
 }
 
-/* MODAL */
+/* MODAL - CORRIGIDO PARA CABER NA TELA */
 .modal-overlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0,0,0,0.7);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   z-index: 1000;
-  padding: 15px;
+  padding: 10px;
+  overflow-y: auto;
 }
 .modal {
   background: var(--surface);
@@ -408,7 +409,8 @@ tr:hover { background: var(--surface-2); }
   padding: 20px;
   max-width: 600px;
   width: 100%;
-  max-height: 90vh;
+  margin: auto;
+  max-height: 95vh;
   overflow-y: auto;
 }
 .modal h2 { margin-bottom: 15px; color: var(--primary); font-size: 20px; }
@@ -420,27 +422,128 @@ tr:hover { background: var(--surface-2); }
   flex-wrap: wrap;
 }
 
-/* CAMERA */
+/* CÂMERA - TOTALMENTE REESCRITA */
+.camera-wrapper {
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+  overflow: hidden;
+}
 .camera-container {
   position: relative;
   width: 100%;
-  max-width: 600px;
-  margin: 0 auto;
+  max-height: 55vh;
   background: #000;
-  border-radius: var(--radius);
+  border-radius: 12px;
   overflow: hidden;
+  flex-shrink: 0;
+  cursor: pointer;
+  border: 3px solid var(--primary);
 }
-.camera-container video, .camera-container img, .camera-container canvas {
+.camera-container video {
   width: 100%;
+  height: 100%;
+  max-height: 55vh;
   display: block;
   object-fit: contain;
+  background: #000;
 }
-.camera-actions {
+.camera-hint {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.7);
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  pointer-events: none;
+  z-index: 5;
+  white-space: nowrap;
+}
+.camera-focus-ring {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 4;
+}
+.camera-focus-ring.active {
+  opacity: 1;
+  animation: focusPulse 0.6s ease-out;
+}
+@keyframes focusPulse {
+  0% { transform: scale(1.5); opacity: 1; }
+  100% { transform: scale(1); opacity: 0; }
+}
+
+.camera-controls {
   display: flex;
   gap: 10px;
   justify-content: center;
-  margin-top: 15px;
-  flex-wrap: wrap;
+  align-items: center;
+  padding: 12px 0 0 0;
+  flex-shrink: 0;
+}
+.btn-capture {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--success);
+  border: 4px solid #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  cursor: pointer;
+  transition: transform 0.15s;
+  flex-shrink: 0;
+}
+.btn-capture:active {
+  transform: scale(0.9);
+}
+.btn-cancel-cam {
+  padding: 12px 20px;
+  border-radius: 25px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-weight: 800;
+  font-size: 14px;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* OCR PROGRESS */
+.ocr-progress {
+  width: 100%;
+  background: var(--surface-2);
+  border-radius: 8px;
+  height: 16px;
+  margin-top: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.ocr-progress-bar {
+  height: 100%;
+  background: var(--primary);
+  transition: width 0.3s;
+  border-radius: 8px;
+}
+.ocr-status {
+  margin-top: 8px;
+  text-align: center;
+  color: var(--text-soft);
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
 }
 
 /* LOADING */
@@ -479,37 +582,14 @@ tr:hover { background: var(--surface-2); }
 .toast.warning { border-left-color: var(--warning); }
 @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
-/* OCR PROGRESS */
-.ocr-progress {
-  width: 100%;
-  background: var(--surface-2);
-  border-radius: 8px;
-  height: 20px;
-  margin-top: 10px;
-  overflow: hidden;
-}
-.ocr-progress-bar {
-  height: 100%;
-  background: var(--primary);
-  transition: width 0.3s;
-  border-radius: 8px;
-}
-
-/* RESPONSIVE - TABLET E MOBILE */
+/* RESPONSIVE */
 @media (max-width: 968px) {
-  .dashboard-grid {
-    grid-template-columns: 1fr;
-  }
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+  .dashboard-grid { grid-template-columns: 1fr; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 768px) {
-  .sidebar {
-    transform: translateX(-100%);
-    width: 260px;
-  }
+  .sidebar { transform: translateX(-100%); width: 260px; }
   .sidebar.open { transform: translateX(0); }
   .main { margin-left: 0; padding: 12px; width: 100%; }
   .menu-toggle { display: block; }
@@ -519,75 +599,40 @@ tr:hover { background: var(--surface-2); }
   .card { padding: 15px; margin-bottom: 15px; }
   .card-title { font-size: 16px; margin-bottom: 12px; }
   
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-  }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .stat-card { padding: 15px 12px; }
   .stat-card .value { font-size: 24px; }
   .stat-card .label { font-size: 11px; }
   
-  .filters {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
+  .filters { grid-template-columns: 1fr; gap: 8px; }
   
-  table {
-    font-size: 13px;
-    min-width: 500px;
-  }
-  th, td { 
-    padding: 10px 8px; 
-    font-size: 12px; 
-  }
+  table { font-size: 13px; min-width: 500px; }
+  th, td { padding: 10px 8px; font-size: 12px; }
   
-  .btn { 
-    padding: 12px 16px; 
-    font-size: 15px;
-    min-height: 44px;
-  }
+  .btn { padding: 12px 16px; font-size: 15px; min-height: 44px; }
   .btn-sm { padding: 8px 12px; font-size: 13px; min-height: 38px; }
   
-  .modal { padding: 18px; }
+  .modal { padding: 15px; }
   .modal h2 { font-size: 18px; }
   
-  .checkbox-item {
-    padding: 10px;
-  }
-  .checkbox-item .pedido-num {
-    font-size: 14px;
-  }
-  .checkbox-item .pedido-cli {
-    font-size: 12px;
-  }
+  .camera-container { max-height: 50vh; }
+  .camera-container video { max-height: 50vh; }
+  .btn-capture { width: 56px; height: 56px; font-size: 24px; }
 }
 
 @media (max-width: 480px) {
   .login-box { padding: 25px 18px; }
   .login-box h1 { font-size: 20px; }
   
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-  }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .stat-card { padding: 12px 10px; }
   .stat-card .value { font-size: 22px; }
   
-  table {
-    font-size: 11px;
-    min-width: 450px;
-  }
-  th, td {
-    padding: 8px 6px;
-    font-size: 11px;
-  }
+  table { font-size: 11px; min-width: 450px; }
+  th, td { padding: 8px 6px; font-size: 11px; }
   
-  .camera-actions {
-    flex-direction: column;
-  }
-  .camera-actions .btn {
-    width: 100%;
-  }
+  .camera-container { max-height: 45vh; }
+  .camera-container video { max-height: 45vh; }
   
   .form-group input, .form-group select, .form-group textarea {
     font-size: 14px;
@@ -595,22 +640,12 @@ tr:hover { background: var(--surface-2); }
   }
 }
 
-/* LANDSCAPE MOBILE */
 @media (max-width: 896px) and (orientation: landscape) {
-  .modal {
-    max-height: 95vh;
-    padding: 15px;
-  }
-  .camera-container {
-    max-height: 60vh;
-  }
-  .main {
-    padding: 10px;
-  }
-  .card {
-    padding: 12px;
-    margin-bottom: 12px;
-  }
+  .modal { max-height: 95vh; padding: 12px; }
+  .camera-container { max-height: 70vh; }
+  .camera-container video { max-height: 70vh; }
+  .main { padding: 10px; }
+  .card { padding: 12px; margin-bottom: 12px; }
 }
 </style>
 </head>
@@ -664,7 +699,7 @@ tr:hover { background: var(--surface-2); }
 
 <script>
 /* ============ ESTADO ============ */
-const DB_KEY = 'sep_entrega_db_v5';
+const DB_KEY = 'sep_entrega_db_v6';
 let db = {
   users: [
     { id: 1, login: 'admin', pass: 'admin', nome: 'Administrador', funcao: 'admin', ativo: true },
@@ -679,6 +714,7 @@ let db = {
 let currentUser = null;
 let currentView = 'dashboard';
 let cameraStream = null;
+let currentCameraModo = null;
 
 /* ============ PERSISTÊNCIA ============ */
 function loadDB() {
@@ -744,10 +780,10 @@ function buildNav() {
   document.getElementById('userInfo').innerHTML = '<b>' + currentUser.nome + '</b><br>' + currentUser.funcao.toUpperCase();
   
   const items = [
-    { id: 'dashboard', icon: '📊', label: 'Dashboard' },
-    { id: 'separacao', icon: '📦', label: 'Separação' },
-    { id: 'entregas', icon: '🚚', label: 'Entregas' },
-    { id: 'historico', icon: '📜', label: 'Histórico' }
+    { id: 'dashboard', icon: '', label: 'Dashboard' },
+    { id: 'separacao', icon: '', label: 'Separação' },
+    { id: 'entregas', icon: '', label: 'Entregas' },
+    { id: 'historico', icon: '', label: 'Histórico' }
   ];
   
   if (currentUser.funcao === 'admin') {
@@ -817,7 +853,7 @@ function renderDashboard() {
     '</div>' +
     '<div class="dashboard-grid">' +
       '<div class="table-card">' +
-        '<h3 class="card-title">📋 Últimos Pedidos</h3>' +
+        '<h3 class="card-title"> Últimos Pedidos</h3>' +
         '<div class="table-wrap"><table>' +
           '<thead><tr><th>Pedido</th><th>Cliente</th><th>Status</th><th>Separador</th><th>Data</th></tr></thead>' +
           '<tbody>' +
@@ -868,7 +904,7 @@ function renderSeparacao() {
       '<h3 class="card-title">Nova Separação</h3>' +
       (podeEditar ? 
         '<p style="margin-bottom:15px; color:var(--text-soft); font-size:14px;">Clique para fotografar o pedido impresso. O OCR irá identificar os dados automaticamente.</p>' +
-        '<button class="btn btn-block" onclick="openCamera(\'separacao\')">📷 FOTOGRAFAR PEDIDO</button>' 
+        '<button class="btn btn-block" onclick="openCamera(\'separacao\')"> FOTOGRAFAR PEDIDO</button>' 
         : '<p style="color:var(--text-soft); font-size:14px;">Apenas separadores podem criar novas separações.</p>') +
     '</div>' +
     '<div class="card">' +
@@ -1210,7 +1246,7 @@ function renderRelatorios() {
         '<input type="text" id="rEnt" placeholder="Entregador">' +
         '<input type="text" id="rSep" placeholder="Separador">' +
       '</div>' +
-      '<button class="btn" onclick="exportExcel()">📊 Exportar Excel</button>' +
+      '<button class="btn" onclick="exportExcel()"> Exportar Excel</button>' +
       '<button class="btn btn-danger" onclick="exportPDF()" style="margin-left:10px;">📄 Exportar PDF</button>' +
     '</div>' +
     '<div class="card"><h3 class="card-title">Prévia</h3><div id="relPrev"></div></div>';
@@ -1295,7 +1331,7 @@ function exportPDF() {
   toast('PDF exportado', 'success');
 }
 
-/* ============ CÂMERA / OCR APRIMORADO ============ */
+/* ============ CÂMERA OTIMIZADA ============ */
 async function openCamera(modo) {
   if (typeof Tesseract === 'undefined') {
     showModal(
@@ -1307,42 +1343,89 @@ async function openCamera(modo) {
     return;
   }
   
+  currentCameraModo = modo;
+  
   showModal(
-    '<h2>' + (modo === 'separacao' ? 'Fotografar Pedido' : 'Receber Pedido') + '</h2>' +
-    '<p style="margin-bottom:10px; font-size:13px; color:var(--text-soft);">💡 Dica: Segure o celular na vertical (em pé) para melhor precisão</p>' +
-    '<div class="camera-container" id="camBox">' +
-      '<video id="camVideo" autoplay playsinline></video>' +
-    '</div>' +
-    '<div class="camera-actions">' +
-      '<button class="btn btn-success" onclick="capturePhoto(\'' + modo + '\')">📷 Capturar</button>' +
-      '<button class="btn btn-secondary" onclick="closeCamera()">Cancelar</button>' +
-    '</div>' +
-    '<div id="ocrProgress" style="margin-top:15px;"></div>' +
-    '<p id="ocrStatus" style="margin-top:10px; text-align:center; color:var(--text-soft); font-size:14px;"></p>'
+    '<h2>' + (modo === 'separacao' ? '📷 Fotografar Pedido' : '📷 Receber Pedido') + '</h2>' +
+    '<div class="camera-wrapper">' +
+      '<div class="camera-container" id="camContainer" onclick="doCapture()">' +
+        '<div class="camera-hint">👆 Toque na imagem ou no botão para fotografar</div>' +
+        '<div class="camera-focus-ring" id="focusRing"></div>' +
+        '<video id="camVideo" autoplay playsinline muted></video>' +
+      '</div>' +
+      '<div class="camera-controls">' +
+        '<button class="btn-capture" id="btnCapture" onclick="doCapture()" title="Tirar foto">📷</button>' +
+        '<button class="btn-cancel-cam" onclick="closeCamera()">✕ Cancelar</button>' +
+      '</div>' +
+      '<div id="ocrProgress" style="display:none;"><div class="ocr-progress"><div class="ocr-progress-bar" id="ocrBar" style="width:0%"></div></div></div>' +
+      '<p id="ocrStatus" class="ocr-status" style="display:none;"></p>' +
+    '</div>'
   );
+  
   try {
-    var stream = await navigator.mediaDevices.getUserMedia({ 
-      video: { 
-        facingMode: 'environment',
-        width: { ideal: 1920 },
-        height: { ideal: 1080 }
-      }, 
-      audio: false 
-    });
+    var constraints = {
+      video: {
+        facingMode: { ideal: 'environment' },
+        width: { ideal: 1280, max: 1920 },
+        height: { ideal: 720, max: 1080 },
+        focusMode: { ideal: 'continuous' },
+        advanced: [
+          { focusMode: 'continuous' },
+          { exposureMode: 'continuous' }
+        ]
+      },
+      audio: false
+    };
+    
+    var stream = await navigator.mediaDevices.getUserMedia(constraints);
     cameraStream = stream;
     var video = document.getElementById('camVideo');
     video.srcObject = stream;
     
-    // Ajustar orientação
+    // Tap to focus
+    var container = document.getElementById('camContainer');
+    container.addEventListener('click', function(e) {
+      if (e.target.id === 'btnCapture' || e.target.closest('#btnCapture')) return;
+      showFocusRing(e);
+    });
+    
     video.addEventListener('loadedmetadata', function() {
-      video.setAttribute('width', video.videoWidth);
-      video.setAttribute('height', video.videoHeight);
+      console.log('Câmera pronta:', video.videoWidth + 'x' + video.videoHeight);
     });
   } catch (e) {
-    toast('Erro ao acessar câmera: ' + e.message, 'error');
-    closeModal();
+    // Fallback sem focusMode
+    try {
+      var stream2 = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false
+      });
+      cameraStream = stream2;
+      document.getElementById('camVideo').srcObject = stream2;
+    } catch (e2) {
+      toast('Erro ao acessar câmera: ' + e2.message, 'error');
+      closeModal();
+    }
   }
 }
+
+function showFocusRing(e) {
+  var ring = document.getElementById('focusRing');
+  if (!ring) return;
+  var rect = e.currentTarget.getBoundingClientRect();
+  var x = e.clientX - rect.left - 30;
+  var y = e.clientY - rect.top - 30;
+  ring.style.left = x + 'px';
+  ring.style.top = y + 'px';
+  ring.classList.remove('active');
+  void ring.offsetWidth;
+  ring.classList.add('active');
+}
+
+function doCapture() {
+  if (!cameraStream) return;
+  capturePhoto(currentCameraModo);
+}
+
 function stopCamera() {
   if (cameraStream) {
     cameraStream.getTracks().forEach(function(t) { t.stop(); });
@@ -1353,29 +1436,46 @@ function closeCamera() {
   stopCamera();
   closeModal();
 }
+
 async function capturePhoto(modo) {
   var video = document.getElementById('camVideo');
-  var canvas = document.createElement('canvas');
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  var ctx = canvas.getContext('2d');
-  
-  // Rotacionar se necessário (landscape)
-  if (video.videoWidth > video.videoHeight) {
-    canvas.width = video.videoHeight;
-    canvas.height = video.videoWidth;
-    ctx.translate(canvas.width, 0);
-    ctx.rotate(90 * Math.PI / 180);
+  if (!video || !video.videoWidth) {
+    toast('Câmera não está pronta', 'error');
+    return;
   }
   
-  ctx.drawImage(video, 0, 0);
-  var foto = canvas.toDataURL('image/jpeg', 0.9);
-  stopCamera();
+  var canvas = document.createElement('canvas');
+  var w = video.videoWidth;
+  var h = video.videoHeight;
   
+  // Detectar rotação (landscape)
+  var isLandscape = w > h;
+  if (isLandscape) {
+    canvas.width = h;
+    canvas.height = w;
+    var ctx = canvas.getContext('2d');
+    ctx.translate(canvas.width, 0);
+    ctx.rotate(90 * Math.PI / 180);
+    ctx.drawImage(video, 0, 0, w, h);
+  } else {
+    canvas.width = w;
+    canvas.height = h;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+  }
+  
+  var foto = canvas.toDataURL('image/jpeg', 0.9);
+  
+  // Mostrar progresso
   var progressDiv = document.getElementById('ocrProgress');
   var statusEl = document.getElementById('ocrStatus');
-  progressDiv.innerHTML = '<div class="ocr-progress"><div class="ocr-progress-bar" id="ocrBar" style="width:0%"></div></div>';
-  statusEl.textContent = 'Processando imagem...';
+  if (progressDiv) progressDiv.style.display = 'block';
+  if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Processando imagem...'; }
+  
+  // Esconder câmera e mostrar progresso
+  var camContainer = document.getElementById('camContainer');
+  var camControls = document.querySelector('.camera-controls');
+  if (camContainer) camContainer.style.display = 'none';
+  if (camControls) camControls.style.display = 'none';
   
   try {
     var result = await Tesseract.recognize(foto, 'por', {
@@ -1384,11 +1484,8 @@ async function capturePhoto(modo) {
           var pct = Math.round(m.progress * 100);
           var bar = document.getElementById('ocrBar');
           if (bar) bar.style.width = pct + '%';
-          statusEl.textContent = 'Lendo texto... ' + pct + '%';
+          if (statusEl) statusEl.textContent = 'Lendo texto... ' + pct + '%';
         }
-      },
-      errorHandler: function(err) {
-        console.error('OCR Error:', err);
       }
     });
     
@@ -1396,7 +1493,7 @@ async function capturePhoto(modo) {
     console.log('OCR Texto:', text);
     
     var dados = parseOCR(text);
-    statusEl.textContent = 'OCR concluído!';
+    if (statusEl) statusEl.textContent = 'OCR concluído!';
     
     showModal(
       '<h2>Confirmar Dados do Pedido</h2>' +
@@ -1406,7 +1503,7 @@ async function capturePhoto(modo) {
       '<div class="form-group"><label>Código do Cliente</label><input id="ocrCod" value="' + dados.codigo + '"></div>' +
       '<div class="form-group"><label>Nome do Cliente</label><input id="ocrCli" value="' + dados.cliente + '"></div>' +
       '<div class="form-group"><label>Endereço</label><textarea id="ocrEnd" rows="3">' + dados.endereco + '</textarea></div>' +
-      '<details style="margin-top:10px;"><summary style="cursor:pointer; font-weight:800; font-size:13px;"> Ver texto OCR completo</summary><pre style="background:var(--surface-2); padding:10px; border-radius:8px; font-size:11px; overflow-x:auto; white-space:pre-wrap; margin-top:5px; max-height:200px; overflow-y:auto;">' + text.replace(/</g, '&lt;') + '</pre></details>' +
+      '<details style="margin-top:10px;"><summary style="cursor:pointer; font-weight:800; font-size:13px;">📄 Ver texto OCR completo</summary><pre style="background:var(--surface-2); padding:10px; border-radius:8px; font-size:11px; overflow-x:auto; white-space:pre-wrap; margin-top:5px; max-height:150px; overflow-y:auto;">' + text.replace(/</g, '&lt;') + '</pre></details>' +
       '<div class="modal-actions">' +
         '<button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>' +
         '<button class="btn btn-success" onclick="confirmarPedido(\'' + modo + '\', \'' + foto.replace(/'/g, "\\'") + '\')">✓ Confirmar</button>' +
@@ -1414,7 +1511,10 @@ async function capturePhoto(modo) {
     );
   } catch (e) {
     toast('Erro no OCR: ' + e.message, 'error');
-    statusEl.textContent = 'Erro no OCR: ' + e.message;
+    if (statusEl) statusEl.textContent = 'Erro: ' + e.message;
+    // Restaurar câmera
+    if (camContainer) camContainer.style.display = 'block';
+    if (camControls) camControls.style.display = 'flex';
   }
 }
 
@@ -1464,43 +1564,36 @@ function confirmarManual(modo) {
   }
 }
 
-/* ============ PARSER OCR - VERSÃO APRIMORADA ============ */
+/* ============ PARSER OCR ============ */
 function parseOCR(text) {
   var linhas = text.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
   var t = text.toUpperCase();
   var numero = '', data = '', codigo = '', cliente = '', endereco = '';
   
-  // 1. NÚMERO DO PEDIDO - Priorizar padrões específicos
-  // Padrão 1: "ABERTO - No 0000164381"
+  // 1. NÚMERO DO PEDIDO
   var mPedido1 = t.match(/(?:ABERIO|ABERTO|ABERT0)\s*[-–]?\s*N[O0º°]?\s*([0-9]{6,})/);
   if (mPedido1) {
-    numero = mPedido1[1];
+    numero = mPedido1[1].replace(/[^0-9]/g, '');
+    if (numero.length > 8) numero = numero.slice(-8);
   }
   
-  // Padrão 2: "PEDIDO" seguido de número na próxima linha
   if (!numero) {
     var idxPedido = t.indexOf('PEDIDO');
     if (idxPedido >= 0) {
       var resto = t.substring(idxPedido);
       var mPedido2 = resto.match(/N[O0º°]?\s*([0-9]{6,})/);
-      if (mPedido2) numero = mPedido2[1];
+      if (mPedido2) {
+        numero = mPedido2[1].replace(/[^0-9]/g, '');
+        if (numero.length > 8) numero = numero.slice(-8);
+      }
     }
   }
   
-  // Validar: deve conter apenas dígitos
-  if (numero) {
-    numero = numero.replace(/[^0-9]/g, '');
-    // Pegar últimos 8 dígitos
-    if (numero.length > 8) {
-      numero = numero.slice(-8);
-    }
-  }
-  
-  // 2. DATA - Formato DD/MM/AAAA
+  // 2. DATA
   var mData = t.match(/(\d{2}\/\d{2}\/\d{4})/);
   if (mData) data = mData[1];
   
-  // 3. CLIENTE - Após "CUPOM SEM VALOR FISCAL"
+  // 3. CLIENTE - Após CUPOM/GUPOM
   var idxCupom = t.indexOf('CUPOM SEM VALOR FISCAL');
   if (idxCupom < 0) idxCupom = t.indexOf('GUPOM SEM VALOR FISCAL');
   
@@ -1508,15 +1601,12 @@ function parseOCR(text) {
     var textoApos = text.substring(idxCupom);
     var linhasApos = textoApos.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0 && l.length < 100; });
     
-    // Primeira linha após cupom deve ter: CÓDIGO - NOME
     for (var i = 0; i < linhasApos.length; i++) {
       var linha = linhasApos[i];
-      // Padrão: "583 - MUNHOZ ACESSORIOS..."
       var mCliente = linha.match(/^(\d{2,5})\s*[-–—]\s*(.+)/);
       if (mCliente) {
         codigo = mCliente[1];
         cliente = mCliente[2].trim();
-        // Remover LTDA, ME, etc
         cliente = cliente.replace(/\s*LTDA\.?\s*$/i, '')
                         .replace(/\s*LIDA\.?\s*$/i, '')
                         .replace(/\s*ME\s*$/i, '')
@@ -1527,7 +1617,7 @@ function parseOCR(text) {
     }
   }
   
-  // 4. ENDEREÇO - Procurar AVENIDA, RUA, etc
+  // 4. ENDEREÇO
   var mEndereco = t.match(/(?:AVENTIDA|AVENIDA|AVENI0A|AV\s|RUA|ALAMEDA|ESTRADA)\s+([A-Z0-9\s,]+(?:\d{3,}))/);
   if (mEndereco) {
     endereco = mEndereco[0].trim().replace(/[|]/g, '').trim();
@@ -1547,10 +1637,7 @@ function parseOCR(text) {
     endereco += ' / CEP: ' + mCep[1];
   }
   
-  // Limpeza final
   endereco = endereco.replace(/[|]/g, '').trim();
-  
-  console.log('Parseado:', { numero: numero, data: data, codigo: codigo, cliente: cliente, endereco: endereco });
   
   return { numero: numero, data: data, codigo: codigo, cliente: cliente, endereco: endereco };
 }
