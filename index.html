@@ -10,7 +10,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<!-- Leaflet Maps -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
@@ -58,41 +57,17 @@ button, input, select, textarea {
 }
 .hidden { display: none !important; }
 
-/* LOGIN */
-.login-wrap {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-}
-.login-box {
-  background: var(--surface);
-  padding: 30px 20px;
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  width: 100%;
-  max-width: 420px;
-}
+.login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); }
+.login-box { background: var(--surface); padding: 30px 20px; border-radius: var(--radius); box-shadow: var(--shadow); width: 100%; max-width: 420px; }
 .login-box h1 { text-align: center; margin-bottom: 10px; color: var(--primary); font-size: 22px; }
 .login-box p.sub { text-align: center; color: var(--text-soft); margin-bottom: 25px; font-weight: 600; font-size: 14px; }
 
-/* FORMS */
 .form-group { margin-bottom: 15px; }
 .form-group label { display: block; margin-bottom: 6px; font-weight: 800; color: var(--text); font-size: 14px; }
-.form-group input, .form-group select, .form-group textarea {
-  width: 100%; padding: 12px 14px; border: 2px solid var(--border); border-radius: 8px;
-  background: var(--surface); color: var(--text); font-weight: 700; transition: border 0.2s; font-size: 16px;
-}
+.form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px 14px; border: 2px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font-weight: 700; transition: border 0.2s; font-size: 16px; }
 .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--primary); }
 
-/* BUTTONS */
-.btn {
-  display: inline-block; padding: 14px 20px; border: none; border-radius: 8px;
-  background: var(--primary); color: #fff; font-weight: 800; cursor: pointer;
-  text-align: center; transition: all 0.2s; font-size: 16px; min-height: 48px; text-decoration: none;
-}
+.btn { display: inline-block; padding: 14px 20px; border: none; border-radius: 8px; background: var(--primary); color: #fff; font-weight: 800; cursor: pointer; text-align: center; transition: all 0.2s; font-size: 16px; min-height: 48px; text-decoration: none; }
 .btn:hover { background: var(--primary-dark); transform: translateY(-1px); }
 .btn:active { transform: translateY(0); }
 .btn-block { width: 100%; display: block; }
@@ -106,14 +81,12 @@ button, input, select, textarea {
 .btn-secondary:hover { background: var(--border); }
 .btn-sm { padding: 10px 14px; font-size: 14px; min-height: 42px; }
 
-/* CHECKBOX */
 .checkbox-item { display: flex; align-items: flex-start; padding: 12px; background: var(--surface-2); border-radius: 8px; margin-bottom: 10px; cursor: pointer; }
 .checkbox-item input[type="checkbox"] { width: 22px; height: 22px; margin-right: 12px; margin-top: 2px; flex-shrink: 0; }
 .checkbox-item .info { flex: 1; min-width: 0; }
 .checkbox-item .pedido-num { font-weight: 800; color: var(--primary); font-size: 15px; margin-bottom: 4px; }
 .checkbox-item .pedido-cli { font-size: 13px; color: var(--text-soft); line-height: 1.4; }
 
-/* LAYOUT */
 .app { display: flex; min-height: 100vh; }
 .sidebar { width: 260px; background: var(--surface); border-right: 1px solid var(--border); padding: 20px 0; position: fixed; height: 100vh; overflow-y: auto; transition: transform 0.3s; z-index: 100; }
 .sidebar-header { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 15px; }
@@ -130,11 +103,9 @@ button, input, select, textarea {
 .topbar-actions { display: flex; gap: 10px; align-items: center; }
 .menu-toggle { display: none; background: none; border: none; font-size: 28px; cursor: pointer; color: var(--text); }
 
-/* CARDS */
 .card { background: var(--surface); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); margin-bottom: 20px; }
 .card-title { font-size: 18px; margin-bottom: 15px; color: var(--primary); }
 
-/* DASHBOARD */
 .dashboard-grid { display: grid; grid-template-columns: 1fr 350px; gap: 20px; align-items: start; }
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
 .stat-card { background: var(--surface); padding: 18px 15px; border-radius: var(--radius); box-shadow: var(--shadow); border-left: 5px solid var(--primary); }
@@ -149,14 +120,12 @@ button, input, select, textarea {
 .table-card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
 .table-card .card-title { padding: 15px 20px; margin: 0; border-bottom: 2px solid var(--border); font-size: 17px; }
 
-/* TABLES */
 .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%; }
 table { width: 100%; border-collapse: collapse; background: var(--surface); font-size: 14px; min-width: 600px; }
 th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 700; white-space: nowrap; }
 th { background: var(--surface-2); color: var(--text); font-size: 12px; text-transform: uppercase; position: sticky; top: 0; }
 tr:hover { background: var(--surface-2); }
 
-/* BADGES */
 .badge { display: inline-block; padding: 5px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; text-transform: uppercase; white-space: nowrap; }
 .badge-separado { background: #dbeafe; color: #1e40af; }
 .badge-em-entrega { background: #fef3c7; color: #92400e; }
@@ -167,17 +136,14 @@ tr:hover { background: var(--surface-2); }
 [data-theme="dark"] .badge-entregue { background: #064e3b; color: #d1fae5; }
 [data-theme="dark"] .badge-problema { background: #7f1d1d; color: #fee2e2; }
 
-/* FILTERS */
 .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 15px; }
 .filters input, .filters select { padding: 10px; border: 2px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font-weight: 700; font-size: 14px; }
 
-/* MODAL */
 .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: flex-start; justify-content: center; z-index: 1000; padding: 10px; overflow-y: auto; }
 .modal { background: var(--surface); border-radius: var(--radius); padding: 20px; max-width: 600px; width: 100%; margin: auto; max-height: 95vh; overflow-y: auto; }
 .modal h2 { margin-bottom: 15px; color: var(--primary); font-size: 20px; }
 .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; flex-wrap: wrap; }
 
-/* CÂMERA */
 .camera-wrapper { display: flex; flex-direction: column; width: 100%; }
 .camera-container { position: relative; width: 100%; height: 50vh; background: #000; border-radius: 12px; overflow: hidden; cursor: pointer; border: 3px solid var(--primary); flex-shrink: 0; }
 .camera-container video { width: 100%; height: 100%; display: block; object-fit: cover; background: #000; }
@@ -193,75 +159,20 @@ tr:hover { background: var(--surface-2); }
 .ocr-progress-bar { height: 100%; background: var(--primary); transition: width 0.3s; border-radius: 8px; }
 .ocr-status { margin-top: 8px; text-align: center; color: var(--text-soft); font-size: 13px; font-weight: 700; flex-shrink: 0; }
 
-/* MAPA */
-.map-container {
-  width: 100%;
-  height: 400px;
-  border-radius: var(--radius);
-  margin-bottom: 20px;
-  z-index: 1;
-}
-.route-info {
-  background: var(--surface-2);
-  padding: 15px;
-  border-radius: 8px;
-  margin-bottom: 15px;
-}
-.route-info .stat {
-  display: inline-block;
-  margin-right: 20px;
-  font-size: 14px;
-}
-.route-info .stat b {
-  color: var(--primary);
-  font-size: 18px;
-}
-.pedido-rota-item {
-  display: flex;
-  align-items: center;
-  padding: 12px;
-  background: var(--surface);
-  border-radius: 8px;
-  margin-bottom: 8px;
-  border-left: 4px solid var(--primary);
-}
-.pedido-rota-item .numero {
-  font-weight: 800;
-  color: var(--primary);
-  margin-right: 15px;
-  min-width: 80px;
-}
+.map-container { width: 100%; height: 400px; border-radius: var(--radius); margin-bottom: 20px; z-index: 1; }
+.route-info { background: var(--surface-2); padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+.route-info .stat { display: inline-block; margin-right: 20px; font-size: 14px; }
+.route-info .stat b { color: var(--primary); font-size: 18px; }
+.pedido-rota-item { display: flex; align-items: center; padding: 12px; background: var(--surface); border-radius: 8px; margin-bottom: 8px; border-left: 4px solid var(--primary); }
+.pedido-rota-item .numero { font-weight: 800; color: var(--primary); margin-right: 15px; min-width: 80px; }
 .pedido-rota-item .info { flex: 1; }
 .pedido-rota-item .cliente { font-size: 14px; color: var(--text-soft); }
-.pedido-rota-item .distancia {
-  font-size: 12px;
-  color: var(--text-soft);
-  margin-left: 10px;
-}
-.tracking-status {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px;
-  background: var(--success);
-  color: white;
-  border-radius: 8px;
-  margin-bottom: 15px;
-}
+.pedido-rota-item .distancia { font-size: 12px; color: var(--text-soft); margin-left: 10px; }
+.tracking-status { display: flex; align-items: center; gap: 10px; padding: 12px; background: var(--success); color: white; border-radius: 8px; margin-bottom: 15px; }
 .tracking-status.inactive { background: var(--text-soft); }
-.tracking-dot {
-  width: 12px;
-  height: 12px;
-  background: white;
-  border-radius: 50%;
-  animation: pulse 2s infinite;
-}
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
+.tracking-dot { width: 12px; height: 12px; background: white; border-radius: 50%; animation: pulse 2s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
-/* TOAST */
 .toast-container { position: fixed; top: 20px; right: 20px; z-index: 2000; }
 .toast { background: var(--surface); padding: 15px 20px; border-radius: 8px; box-shadow: var(--shadow); margin-bottom: 10px; border-left: 4px solid var(--primary); min-width: 250px; font-weight: 700; animation: slideIn 0.3s; font-size: 14px; }
 .toast.success { border-left-color: var(--success); }
@@ -269,7 +180,6 @@ tr:hover { background: var(--surface-2); }
 .toast.warning { border-left-color: var(--warning); }
 @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
-/* RESPONSIVO */
 @media (max-width: 968px) { .dashboard-grid { grid-template-columns: 1fr; } .stats-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 768px) { .sidebar { transform: translateX(-100%); width: 260px; } .sidebar.open { transform: translateX(0); } .main { margin-left: 0; padding: 12px; width: 100%; } .menu-toggle { display: block; } .topbar { padding: 12px 15px; margin-bottom: 15px; } .topbar h1 { font-size: 17px; } .card { padding: 15px; margin-bottom: 15px; } .card-title { font-size: 16px; margin-bottom: 12px; } .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; } .stat-card { padding: 15px 12px; } .stat-card .value { font-size: 24px; } .stat-card .label { font-size: 11px; } .filters { grid-template-columns: 1fr; gap: 8px; } table { font-size: 13px; min-width: 500px; } th, td { padding: 10px 8px; font-size: 12px; } .btn { padding: 12px 16px; font-size: 15px; min-height: 44px; } .btn-sm { padding: 8px 12px; font-size: 13px; min-height: 38px; } .camera-container { height: 60vh; } .btn-capture { width: 64px; height: 64px; font-size: 28px; } .map-container { height: 300px; } }
 @media (max-width: 480px) { .login-box { padding: 25px 18px; } .login-box h1 { font-size: 20px; } .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; } .stat-card { padding: 12px 10px; } .stat-card .value { font-size: 22px; } table { font-size: 11px; min-width: 450px; } th, td { padding: 8px 6px; font-size: 11px; } .form-group input, .form-group select, .form-group textarea { font-size: 14px; padding: 10px 12px; } .camera-container { height: 65vh; border-radius: 8px; } .btn-capture { width: 60px; height: 60px; font-size: 26px; } .btn-cancel-cam { padding: 10px 16px; font-size: 13px; } .map-container { height: 250px; } }
@@ -280,7 +190,6 @@ tr:hover { background: var(--surface-2); }
 </head>
 <body>
 
-<!-- LOGIN -->
 <div id="loginScreen" class="login-wrap">
   <div class="login-box">
     <h1>📦 Separação & Entrega</h1>
@@ -292,7 +201,6 @@ tr:hover { background: var(--surface-2); }
   </div>
 </div>
 
-<!-- APP -->
 <div id="appScreen" class="app hidden">
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header"><h2>📦 Pedidos</h2><div class="user-info" id="userInfo"></div></div>
@@ -316,7 +224,7 @@ tr:hover { background: var(--surface-2); }
 
 <script>
 /* ============ ESTADO ============ */
-const DB_KEY = 'sep_entrega_db_v9';
+const DB_KEY = 'sep_entrega_db_v10';
 let db = {
   users: [
     { id: 1, login: 'admin', pass: 'admin', nome: 'Administrador', funcao: 'admin', ativo: true },
@@ -325,14 +233,10 @@ let db = {
     { id: 4, login: 'vendedor', pass: '123', nome: 'Carlos Vendedor', funcao: 'vendedor', ativo: true }
   ],
   funcionarios: [],
+  clientes: [],
   pedidos: [],
   logs: [],
-  tracking: {
-    active: false,
-    entregadorId: null,
-    currentPosition: null,
-    lastUpdate: null
-  }
+  tracking: { active: false, entregadorId: null, currentPosition: null, lastUpdate: null }
 };
 let currentUser = null;
 let currentView = 'dashboard';
@@ -348,6 +252,7 @@ let userMarker = null;
 function loadDB() {
   const saved = localStorage.getItem(DB_KEY);
   if (saved) { try { db = JSON.parse(saved); } catch(e) {} }
+  if (!db.clientes) db.clientes = [];
   if (!db.users.find(u => u.login === 'admin')) { db.users.push({ id: 1, login: 'admin', pass: 'admin', nome: 'Administrador', funcao: 'admin', ativo: true }); saveDB(); }
 }
 function saveDB() { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
@@ -472,7 +377,7 @@ function renderSeparacao() {
   var podeEditar = (currentUser.funcao === 'admin' || currentUser.funcao === 'separador');
   c.innerHTML = 
     '<div class="card"><h3 class="card-title">Nova Separação</h3>' +
-    (podeEditar ? '<p style="margin-bottom:15px; color:var(--text-soft); font-size:14px;">Clique para fotografar o pedido impresso. O OCR irá identificar os dados automaticamente.</p><button class="btn btn-block" onclick="openCamera(\'separacao\')">📷 FOTOGRAFAR PEDIDO</button>' : '<p style="color:var(--text-soft); font-size:14px;">Apenas separadores podem criar novas separações.</p>') +
+    (podeEditar ? '<p style="margin-bottom:15px; color:var(--text-soft); font-size:14px;">Clique para fotografar o pedido impresso. O OCR irá identificar o número do pedido e código do cliente.</p><button class="btn btn-block" onclick="openCamera(\'separacao\')">📷 FOTOGRAFAR PEDIDO</button>' : '<p style="color:var(--text-soft); font-size:14px;">Apenas separadores podem criar novas separações.</p>') +
     '</div><div class="card"><h3 class="card-title">Pedidos Separados</h3><div class="filters"><input type="text" id="fSepNum" placeholder="Nº Pedido" oninput="renderSepList()"><input type="text" id="fSepCli" placeholder="Cliente" oninput="renderSepList()"><input type="text" id="fSepSep" placeholder="Separador" oninput="renderSepList()"><input type="date" id="fSepData" onchange="renderSepList()"></div><div id="sepList"></div></div>';
   renderSepList();
 }
@@ -544,12 +449,10 @@ function renderRoteirizacao() {
       '<div id="trackingControls"></div>' +
     '</div>';
   
-  // Inicializar mapa após renderização
   setTimeout(function() { initMap(); }, 100);
 }
 
 function initMap() {
-  // Criar mapa centrado em São Paulo (padrão)
   map = L.map('map').setView([-23.5505, -46.6333], 13);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors'
@@ -569,7 +472,6 @@ async function renderRouteInfo() {
     return;
   }
   
-  // Geocodificar endereços
   var geocodedPedidos = [];
   for (var i = 0; i < pedidosEntrega.length; i++) {
     var p = pedidosEntrega[i];
@@ -590,10 +492,8 @@ async function renderRouteInfo() {
     return;
   }
   
-  // Otimizar rota (algoritmo do vizinho mais próximo)
   var optimizedRoute = optimizeRoute(geocodedPedidos);
   
-  // Calcular distância total
   var totalDistancia = 0;
   for (var i = 0; i < optimizedRoute.length - 1; i++) {
     totalDistancia += calculateDistance(
@@ -602,7 +502,6 @@ async function renderRouteInfo() {
     );
   }
   
-  // Mostrar info
   var html = '<div class="route-info">' +
     '<div class="stat"><b>' + optimizedRoute.length + '</b> pedidos</div>' +
     '<div class="stat"><b>' + totalDistancia.toFixed(1) + '</b> km totais</div>' +
@@ -624,7 +523,6 @@ async function renderRouteInfo() {
   
   document.getElementById('routeInfo').innerHTML = html;
   
-  // Mostrar marcadores no mapa
   showRouteOnMap(optimizedRoute);
 }
 
@@ -644,7 +542,6 @@ async function geocodeAddress(address) {
 function optimizeRoute(pedidos) {
   if (pedidos.length <= 1) return pedidos;
   
-  // Algoritmo do vizinho mais próximo
   var optimized = [pedidos[0]];
   var remaining = pedidos.slice(1);
   
@@ -669,7 +566,7 @@ function optimizeRoute(pedidos) {
 }
 
 function calculateDistance(lat1, lon1, lat2, lon2) {
-  var R = 6371; // km
+  var R = 6371;
   var dLat = (lat2 - lat1) * Math.PI / 180;
   var dLon = (lon2 - lon1) * Math.PI / 180;
   var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -680,12 +577,10 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 }
 
 function showRouteOnMap(pedidos) {
-  // Limpar marcadores antigos
   routeMarkers.forEach(function(m) { map.removeLayer(m); });
   routeMarkers = [];
   if (deliveryPolyline) map.removeLayer(deliveryPolyline);
   
-  // Adicionar marcadores
   var latlngs = [];
   pedidos.forEach(function(p, idx) {
     var marker = L.marker([p.latitude, p.longitude])
@@ -695,7 +590,6 @@ function showRouteOnMap(pedidos) {
     latlngs.push([p.latitude, p.longitude]);
   });
   
-  // Desenhar linha da rota
   if (latlngs.length > 1) {
     deliveryPolyline = L.polyline(latlngs, {color: '#2563eb', weight: 4, opacity: 0.7}).addTo(map);
     map.fitBounds(deliveryPolyline.getBounds(), {padding: [50, 50]});
@@ -729,9 +623,8 @@ function startTracking() {
   db.tracking.lastUpdate = new Date().toISOString();
   saveDB();
   
-  // Solicitar permissão de geolocalização
   if (navigator.geolocation) {
-    trackingInterval = setInterval(updateTrackingPosition, 5000); // Atualizar a cada 5 segundos
+    trackingInterval = setInterval(updateTrackingPosition, 5000);
     updateTrackingPosition();
     toast('Rastreamento iniciado!', 'success');
     renderTrackingControls();
@@ -771,7 +664,6 @@ function updateTrackingPosition() {
     db.tracking.lastUpdate = new Date().toISOString();
     saveDB();
     
-    // Atualizar marcador no mapa
     if (map) {
       if (userMarker) {
         userMarker.setLatLng([lat, lon]);
@@ -786,7 +678,6 @@ function updateTrackingPosition() {
         }).addTo(map).bindPopup('📍 Sua posição');
       }
       
-      // Centralizar mapa na posição atual
       map.setView([lat, lon], map.getZoom());
     }
     
@@ -1059,13 +950,74 @@ async function capturePhoto(modo) {
     
     if (statusEl) statusEl.textContent = 'OCR concluído!';
     
-    showModal('<h2>Confirmar Dados do Pedido</h2><img src="' + foto + '" style="width:100%; max-height:200px; object-fit:contain; border-radius:8px; margin-bottom:15px;"><div class="form-group"><label>Número do Pedido</label><input id="ocrNum" value="' + dados.numero + '"></div><div class="form-group"><label>Data do Pedido</label><input id="ocrData" value="' + dados.data + '"></div><div class="form-group"><label>Código do Cliente</label><input id="ocrCod" value="' + dados.codigo + '"></div><div class="form-group"><label>Nome do Cliente</label><input id="ocrCli" value="' + dados.cliente + '"></div><div class="form-group"><label>Endereço</label><textarea id="ocrEnd" rows="3">' + dados.endereco + '</textarea></div><details style="margin-top:10px;"><summary style="cursor:pointer; font-weight:800; font-size:13px;">📄 Ver texto OCR completo</summary><pre style="background:var(--surface-2); padding:10px; border-radius:8px; font-size:11px; overflow-x:auto; white-space:pre-wrap; margin-top:5px; max-height:150px; overflow-y:auto;">' + text.replace(/</g, '&lt;') + '</pre></details><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-success" onclick="confirmarPedido(\'' + modo + '\', \'' + foto.replace(/'/g, "\\'") + '\')">✓ Confirmar</button></div>');
+    // Buscar cliente pelo código
+    var clienteExistente = db.clientes.find(function(c) { return c.codigo === dados.codigo; });
+    
+    if (clienteExistente) {
+      // Cliente já cadastrado - usar apelido e dados salvos
+      showModal('<h2>Confirmar Dados do Pedido</h2><img src="' + foto + '" style="width:100%; max-height:200px; object-fit:contain; border-radius:8px; margin-bottom:15px;"><p style="margin-bottom:15px; color:var(--success); font-weight:700;">✅ Cliente já cadastrado: <b>' + clienteExistente.apelido + '</b></p><div class="form-group"><label>Número do Pedido</label><input id="ocrNum" value="' + dados.numero + '"></div><div class="form-group"><label>Código do Cliente</label><input id="ocrCod" value="' + dados.codigo + '" readonly></div><div class="form-group"><label>Nome do Cliente (Apelido)</label><input id="ocrCli" value="' + clienteExistente.apelido + '" readonly></div><div class="form-group"><label>Endereço</label><textarea id="ocrEnd" rows="3">' + clienteExistente.endereco + '</textarea></div><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-success" onclick="confirmarPedido(\'' + modo + '\', \'' + foto.replace(/'/g, "\\'") + '\', true)">✓ Confirmar</button></div>');
+    } else {
+      // Novo cliente - cadastrar
+      showModal('<h2>Novo Cliente - Cadastro</h2><img src="' + foto + '" style="width:100%; max-height:150px; object-fit:contain; border-radius:8px; margin-bottom:15px;"><p style="margin-bottom:15px; color:var(--warning); font-weight:700;">📋 Primeiro pedido para este cliente. Complete o cadastro:</p><div class="form-group"><label>Número do Pedido</label><input id="ocrNum" value="' + dados.numero + '"></div><div class="form-group"><label>Código do Cliente</label><input id="ocrCod" value="' + dados.codigo + '"></div><div class="form-group"><label>Apelido (Nome Resumido)</label><input id="clienteApelido" placeholder="Ex: Munhoz" value="' + (dados.cliente ? dados.cliente.split(' ')[0] : '') + '"></div><div class="form-group"><label>Nome Completo (Razão Social)</label><input id="clienteNome" value="' + (dados.cliente || '') + '"></div><div class="form-group"><label>Endereço Completo</label><textarea id="clienteEndereco" rows="3">' + (dados.endereco || '') + '</textarea></div><div class="form-group"><label>CNPJ</label><input id="clienteCnpj" value=""></div><div class="form-group"><label>Telefone</label><input id="clienteTelefone" value=""></div><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-success" onclick="cadastrarClienteEPedido(\'' + modo + '\', \'' + foto.replace(/'/g, "\\'") + '\')">✓ Cadastrar e Confirmar</button></div>');
+    }
   } catch (e) {
     toast('Erro no OCR: ' + e.message, 'error');
     if (statusEl) statusEl.textContent = 'Erro: ' + e.message;
     if (camContainer) camContainer.style.display = 'block';
     if (camControls) camControls.style.display = 'flex';
   }
+}
+
+function cadastrarClienteEPedido(modo, foto) {
+  var numero = document.getElementById('ocrNum').value.trim();
+  var codigo = document.getElementById('ocrCod').value.trim();
+  var apelido = document.getElementById('clienteApelido').value.trim();
+  var nome = document.getElementById('clienteNome').value.trim();
+  var endereco = document.getElementById('clienteEndereco').value.trim();
+  var cnpj = document.getElementById('clienteCnpj').value.trim();
+  var telefone = document.getElementById('clienteTelefone').value.trim();
+  
+  if (!numero || !codigo || !apelido || !nome || !endereco) {
+    toast('Preencha todos os campos obrigatórios', 'error');
+    return;
+  }
+  
+  // Salvar cliente
+  var novoCliente = {
+    codigo: codigo,
+    apelido: apelido,
+    nome: nome,
+    endereco: endereco,
+    cnpj: cnpj,
+    telefone: telefone,
+    dataCadastro: new Date().toISOString(),
+    latitude: null,
+    longitude: null
+  };
+  
+  db.clientes.push(novoCliente);
+  saveDB();
+  toast('Cliente cadastrado com sucesso!', 'success');
+  
+  // Criar pedido com dados do cliente
+  var pedido = {
+    id: Date.now(),
+    numero: numero,
+    codigoCliente: codigo,
+    cliente: apelido,
+    endereco: endereco,
+    separador: currentUser.nome,
+    separadorId: currentUser.id,
+    dataSeparacao: new Date().toISOString(),
+    status: 'SEPARADO',
+    fotoSeparacao: foto
+  };
+  
+  db.pedidos.push(pedido);
+  saveDB();
+  toast('Pedido separado com sucesso', 'success');
+  closeModal();
+  renderSeparacao();
 }
 
 async function scanBarcodeOnly(fotoOriginal, dadosOCR, modo) {
@@ -1122,6 +1074,40 @@ function closeBarcodeScanner() {
   closeModal();
 }
 
+function confirmarPedido(modo, foto, clienteCadastrado) {
+  var numero = document.getElementById('ocrNum').value.trim();
+  var codigo = document.getElementById('ocrCod').value.trim();
+  var endereco = document.getElementById('ocrEnd').value.trim();
+  
+  if (!numero) { toast('Informe o número do pedido', 'error'); return; }
+  
+  if (modo === 'separacao') {
+    var clienteNome = '';
+    if (clienteCadastrado) {
+      var cliente = db.clientes.find(function(c) { return c.codigo === codigo; });
+      if (cliente) clienteNome = cliente.apelido;
+    }
+    
+    var pedido = {
+      id: Date.now(),
+      numero: numero,
+      codigoCliente: codigo,
+      cliente: clienteNome || document.getElementById('ocrCli').value.trim(),
+      endereco: endereco,
+      separador: currentUser.nome,
+      separadorId: currentUser.id,
+      dataSeparacao: new Date().toISOString(),
+      status: 'SEPARADO',
+      fotoSeparacao: foto
+    };
+    db.pedidos.push(pedido);
+    saveDB();
+    toast('Pedido separado com sucesso', 'success');
+    closeModal();
+    renderSeparacao();
+  }
+}
+
 /* ============ ENTRADA MANUAL ============ */
 function entradaManual(modo) {
   showModal('<h2>Inserir Dados Manualmente</h2><div class="form-group"><label>Número do Pedido</label><input id="ocrNum"></div><div class="form-group"><label>Data do Pedido</label><input id="ocrData" type="date"></div><div class="form-group"><label>Código do Cliente</label><input id="ocrCod"></div><div class="form-group"><label>Nome do Cliente</label><input id="ocrCli"></div><div class="form-group"><label>Endereço</label><textarea id="ocrEnd" rows="3"></textarea></div><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-success" onclick="confirmarManual(\'' + modo + '\')">✓ Confirmar</button></div>');
@@ -1139,120 +1125,45 @@ function confirmarManual(modo) {
   }
 }
 
-/* ============ PARSER OCR ============ */
+/* ============ PARSER OCR - SIMPLIFICADO ============ */
 function parseOCR(text) {
-  var linhas = text.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
   var t = text.toUpperCase();
-  var numero = '', data = '', codigo = '', cliente = '', endereco = '';
+  var numero = '', codigo = '';
   
-  var mPedido1 = t.match(/(?:ABERIO|ABERTO|ABERT0)\s*[-–]?\s*N[O0º°]?\s*([0-9]+)/);
-  if (mPedido1) { numero = mPedido1[1].replace(/[^0-9]/g, ''); }
+  // Buscar número do pedido
+  var mPedido = t.match(/(?:ABERIO|ABERTO|ABERT0|PEDIDO)\s*[-–]?\s*N[O0º°]?\s*([0-9]+)/);
+  if (mPedido) {
+    numero = mPedido[1].replace(/[^0-9]/g, '');
+    if (numero.length > 8) numero = numero.slice(-8);
+  }
   
   if (!numero) {
-    var idxPed = t.indexOf('PEDIDO');
-    if (idxPed >= 0) {
-      var resto = t.substring(idxPed, idxPed + 100);
-      var m2 = resto.match(/N[O0º°]?\s*([0-9]+)/);
-      if (m2) { numero = m2[1].replace(/[^0-9]/g, ''); }
+    var mNum = t.match(/N[O0º°]\s*([0-9]{6,})/);
+    if (mNum) {
+      numero = mNum[1].replace(/[^0-9]/g, '');
+      if (numero.length > 8) numero = numero.slice(-8);
     }
   }
   
-  if (!numero) {
-    var m3 = t.match(/N[O0º°]\s*([0-9]{6,})/);
-    if (m3) { numero = m3[1].replace(/[^0-9]/g, ''); }
-  }
-  
-  if (numero && numero.length < 6) numero = '';
-  
-  var mData = t.match(/(\d{2}\/\d{2}\/\d{4})/);
-  if (mData) data = mData[1];
-  
+  // Buscar código do cliente (número antes do traço após CUPOM)
   var idxCupom = t.indexOf('CUPOM SEM VALOR FISCAL');
-  if (idxCupom < 0) idxCupom = t.indexOf('GUPOM SEM VALOR FISCAL');
-  if (idxCupom < 0) idxCupom = t.indexOf('CUPOM');
+  if (idxCupom < 0) idxCupom = t.indexOf('GUPOM');
   
   if (idxCupom >= 0) {
     var textoApos = text.substring(idxCupom);
-    var linhasApos = textoApos.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0 && l.length < 150; });
-    
-    for (var i = 0; i < linhasApos.length; i++) {
-      var linha = linhasApos[i];
-      var mCliente = linha.match(/^(\d{2,5})\s*[-–—]\s*(.+?)(?:\s*[-–]\s*LIDA?\s*$|\s*LIDA?\s*$|\s*ME\s*$|\s*EPP\s*$|$)/i);
-      if (mCliente) {
-        codigo = mCliente[1];
-        cliente = mCliente[2].trim();
-        cliente = cliente.replace(/\s*[-–]\s*LIDA?\s*$/i, '').replace(/\s*LIDA?\s*$/i, '').replace(/\s*LTDA\.?\s*$/i, '').replace(/\s*ME\s*$/i, '').replace(/\s*EPP\s*$/i, '').replace(/[|&]/g, '').trim();
-        break;
-      }
-    }
-    
-    if (!codigo) {
-      for (var i = 0; i < linhasApos.length; i++) {
-        var linha = linhasApos[i];
-        var mNum = linha.match(/^(\d{2,5})\s+/);
-        if (mNum && linha.length > 5) {
-          codigo = mNum[1];
-          cliente = linha.replace(/^\d{2,5}\s+[-–—]?\s*/, '').trim();
-          cliente = cliente.replace(/\s*[-–]\s*LIDA?\s*$/i, '').replace(/\s*LIDA?\s*$/i, '').replace(/\s*LTDA\.?\s*$/i, '').replace(/[|&]/g, '').trim();
-          break;
-        }
-      }
-    }
-    
-    if (!codigo) {
-      for (var i = 0; i < linhasApos.length; i++) {
-        if (linhasApos[i].match(/CNPJ/i)) {
-          if (i > 0) {
-            var linhaAnt = linhasApos[i - 1];
-            var mAnt = linhaAnt.match(/^(\d{2,5})\s*[-–—]?\s*(.+)/);
-            if (mAnt) {
-              codigo = mAnt[1];
-              cliente = mAnt[2].trim().replace(/\s*LIDA?\s*$/i, '').replace(/\s*LTDA\.?\s*$/i, '').replace(/[|&]/g, '').trim();
-            }
-          }
-          break;
-        }
-      }
+    var mCod = textoApos.match(/^(\d{2,5})\s*[-–—]/m);
+    if (mCod) {
+      codigo = mCod[1];
     }
   }
   
-  var mEnd = t.match(/(?:AVENTIDA|AVENIDA|AVENI0A|AV\s|RUA|ALAMEDA|ESTRADA|TRAVESSA)\s+[A-Z0-9\s,]+?\d{3,}/);
-  if (mEnd) {
-    endereco = mEnd[0].trim().replace(/[|&]/g, '').trim();
-    var idxEnd = t.indexOf(mEnd[0]);
-    var restoEnd = t.substring(idxEnd + mEnd[0].length, idxEnd + mEnd[0].length + 200);
-    var mCid = restoEnd.match(/([A-ZÁÉÍÓÚÂÊÔÃÕÇ]{3,}(?:\s+[A-ZÁÉÍÓÚÂÊÔÃÕÇ]+)?)\s*[-–]\s*([A-Z]{2})\s*[-–]?\s*\(?\d{2}\)?\s*[\d\-]{7,}/);
-    if (mCid) {
-      var cidade = mCid[1].trim();
-      var estado = mCid[2].trim();
-      if (cidade.length >= 3 && !cidade.match(/PEDIDO|ABERTO|FISCAL|CUPOM/i)) {
-        endereco = endereco + ' / ' + cidade + ' - ' + estado;
-      }
-    }
-    var mCep = restoEnd.match(/CEP[:\s]*([0-9]{5}-?[0-9]{3})/);
-    if (!mCep) mCep = t.match(/CEP[:\s]*([0-9]{5}-?[0-9]{3})/);
-    if (mCep) endereco += ' / CEP: ' + mCep[1];
+  // Fallback: buscar qualquer número de 2-5 dígitos seguido de traço
+  if (!codigo) {
+    var mCod2 = t.match(/(\d{2,5})\s*[-–—]\s*[A-Z]/);
+    if (mCod2) codigo = mCod2[1];
   }
   
-  if (cliente) {
-    cliente = cliente.replace(/\s*LTDA\.?\s*$/i, '').replace(/\s*LIDA\.?\s*$/i, '').replace(/\s*ME\s*$/i, '').replace(/\s*EPP\s*$/i, '').replace(/[|&]/g, '').replace(/\s+/g, ' ').trim();
-  }
-  endereco = endereco.replace(/[|&]/g, '').replace(/\s+/g, ' ').trim();
-  
-  return { numero: numero, data: data, codigo: codigo, cliente: cliente, endereco: endereco };
-}
-
-function confirmarPedido(modo, foto) {
-  var numero = document.getElementById('ocrNum').value.trim();
-  var dataPed = document.getElementById('ocrData').value.trim();
-  var codigo = document.getElementById('ocrCod').value.trim();
-  var cliente = document.getElementById('ocrCli').value.trim();
-  var endereco = document.getElementById('ocrEnd').value.trim();
-  if (!numero) { toast('Informe o número do pedido', 'error'); return; }
-  if (modo === 'separacao') {
-    var pedido = { id: Date.now(), numero: numero, dataPedido: dataPed, codigoCliente: codigo, cliente: cliente, endereco: endereco, separador: currentUser.nome, separadorId: currentUser.id, dataSeparacao: new Date().toISOString(), status: 'SEPARADO', fotoSeparacao: foto };
-    db.pedidos.push(pedido); saveDB(); toast('Pedido separado com sucesso', 'success'); closeModal(); renderSeparacao();
-  }
+  return { numero: numero, codigo: codigo };
 }
 
 /* ============ MODAL ============ */
