@@ -925,23 +925,36 @@ function cadastrarClienteEPedido() {
 }
 
 function confirmarPedidoCadastrado(modo, foto) {
-  if (isProcessing) return;
-  isProcessing = true;
+  // Resetar flag de processamento para evitar travamento
+  isProcessing = false;
   
-  var numero = document.getElementById('ocrNum').value.trim();
-  var codigo = document.getElementById('ocrCod').value.trim();
-  if (!numero) { alert('Informe o número do pedido'); isProcessing = false; return; }
+  var numeroEl = document.getElementById('ocrNum');
+  var codigoEl = document.getElementById('ocrCod');
   
-  var codigoNorm = codigo.toString().trim().toUpperCase().replace(/[^0-9]/g, '');
-  var cliente = db.clientes.find(function(c) { 
-    return c.codigo.toString().trim().toUpperCase().replace(/[^0-9]/g, '') === codigoNorm; 
-  });
+  var numero = numeroEl ? numeroEl.value.trim() : '';
+  var codigo = codigoEl ? codigoEl.value.trim() : '';
+  
+  console.log('confirmarPedidoCadastrado chamado - numero:', numero, 'codigo:', codigo);
+  
+  if (!numero) { 
+    alert('Informe o número do pedido'); 
+    return; 
+  }
+  
+  // Buscar cliente pelo código (se tiver)
+  var cliente = null;
+  if (codigo) {
+    var codigoNorm = codigo.toString().trim().toUpperCase().replace(/[^0-9]/g, '');
+    cliente = db.clientes.find(function(c) { 
+      return c.codigo.toString().trim().toUpperCase().replace(/[^0-9]/g, '') === codigoNorm; 
+    });
+  }
   
   var pedido = {
     id: Date.now(),
     numero: numero,
     codigoCliente: codigo,
-    cliente: cliente ? cliente.apelido : codigo,
+    cliente: cliente ? cliente.apelido : (document.getElementById('ocrCli') ? document.getElementById('ocrCli').value.trim() : ''),
     endereco: cliente ? cliente.endereco : '',
     separador: currentUser.nome,
     separadorId: currentUser.id,
@@ -949,13 +962,15 @@ function confirmarPedidoCadastrado(modo, foto) {
     status: 'SEPARADO',
     fotoSeparacao: foto
   };
+  
+  console.log('Criando pedido:', pedido);
+  
   db.pedidos.push(pedido);
   saveDB();
-  console.log('Pedido de cliente conhecido criado:', pedido);
   
-  toast('Pedido separado com sucesso', 'success');
+  toast('Pedido separado com sucesso!', 'success');
   
-  // FECHAR MODAL
+  // Fechar modal
   stopCamera();
   document.getElementById('modalContainer').innerHTML = '';
   isProcessing = false;
@@ -1054,7 +1069,7 @@ async function capturePhoto(modo) {
     } else {
       showModal('<h2>📋 Novo Cliente</h2><p style="margin-bottom:15px; color:var(--warning); font-weight:700;">Primeiro pedido para este cliente. Complete o cadastro:</p>' +
         '<div class="form-group"><label>Nº do Pedido <span class="required">*</span></label><input id="ocrNum" value="' + dados.numero + '"></div>' +
-        '<div class="form-group"><label>Código do Cliente <span class="required">*</span></label><input id="ocrCod" value="' + dados.codigo + '"></div>' +
+        '<div class="form-group"><label>Código do Cliente</label><input id="ocrCod" value="' + dados.codigo + '" readonly></div>'
         '<div class="form-group"><label>Apelido <span class="required">*</span> <small style="color:var(--text-soft); font-weight:600;">(nome resumido)</small></label><input id="clienteApelido" placeholder="Ex: Munhoz"></div>' +
         '<div class="form-group"><label>Nome Completo <small style="color:var(--text-soft); font-weight:600;">(opcional)</small></label><input id="clienteNome" placeholder="Razão social"></div>' +
         '<div class="endereco-section"><h4> Endereço</h4>' +
