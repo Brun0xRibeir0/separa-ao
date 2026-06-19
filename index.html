@@ -197,24 +197,8 @@ tr:hover { background: var(--surface-2); }
 .toast.warning { border-left-color: var(--warning); }
 @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
-/* Loading overlay */
-.loading-overlay {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 3000;
-}
-.loading-spinner {
-  width: 50px;
-  height: 50px;
-  border: 5px solid var(--surface-2);
-  border-top-color: var(--primary);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
+.loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 3000; }
+.loading-spinner { width: 50px; height: 50px; border: 5px solid var(--surface-2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 968px) { .dashboard-grid { grid-template-columns: 1fr; } .stats-grid { grid-template-columns: repeat(2, 1fr); } }
@@ -262,7 +246,7 @@ tr:hover { background: var(--surface-2); }
 
 <script>
 /* ============ ESTADO ============ */
-const DB_KEY = 'sep_entrega_db_v13';
+const DB_KEY = 'sep_entrega_db_v14';
 let db = {
   users: [
     { id: 1, login: 'admin', pass: 'admin', nome: 'Administrador', funcao: 'admin', ativo: true },
@@ -292,11 +276,27 @@ let isProcessing = false;
 
 function loadDB() {
   const saved = localStorage.getItem(DB_KEY);
-  if (saved) { try { db = JSON.parse(saved); } catch(e) {} }
+  if (saved) { 
+    try { 
+      db = JSON.parse(saved); 
+      console.log('DB carregado:', db.clientes ? db.clientes.length + ' clientes' : 'sem clientes');
+    } catch(e) { console.error('Erro ao carregar DB:', e); } 
+  }
   if (!db.clientes) db.clientes = [];
-  if (!db.users.find(u => u.login === 'admin')) { db.users.push({ id: 1, login: 'admin', pass: 'admin', nome: 'Administrador', funcao: 'admin', ativo: true }); saveDB(); }
+  if (!db.users.find(u => u.login === 'admin')) { 
+    db.users.push({ id: 1, login: 'admin', pass: 'admin', nome: 'Administrador', funcao: 'admin', ativo: true }); 
+    saveDB(); 
+  }
 }
-function saveDB() { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
+function saveDB() { 
+  try {
+    localStorage.setItem(DB_KEY, JSON.stringify(db)); 
+    console.log('DB salvo com sucesso');
+  } catch(e) {
+    console.error('Erro ao salvar DB:', e);
+    alert('Erro ao salvar dados: ' + e.message);
+  }
+}
 
 function showLoading() { document.getElementById('loadingOverlay').classList.remove('hidden'); }
 function hideLoading() { document.getElementById('loadingOverlay').classList.add('hidden'); }
@@ -320,13 +320,30 @@ function doLogin() {
   document.getElementById('appScreen').classList.remove('hidden');
   initApp();
 }
+
 function doLogout() {
-  stopTracking();
+  console.log('Fazendo logout...');
+  // Parar tracking se existir map
+  if (map && trackingInterval) {
+    clearInterval(trackingInterval);
+    trackingInterval = null;
+  }
+  if (map && userMarker) {
+    map.removeLayer(userMarker);
+    userMarker = null;
+  }
+  // Resetar tracking no DB
+  db.tracking = { active: false, entregadorId: null, currentPosition: null, lastUpdate: null };
+  saveDB();
+  
   currentUser = null;
   sessionStorage.removeItem('currentUser');
   document.getElementById('appScreen').classList.add('hidden');
   document.getElementById('loginScreen').classList.remove('hidden');
   stopCamera();
+  // Limpar modal
+  document.getElementById('modalContainer').innerHTML = '';
+  console.log('Logout concluído');
 }
 
 function toggleTheme() {
@@ -347,14 +364,14 @@ function buildNav() {
   nav.innerHTML = '';
   document.getElementById('userInfo').innerHTML = '<b>' + currentUser.nome + '</b><br>' + currentUser.funcao.toUpperCase();
   const items = [
-    { id: 'dashboard', icon: '', label: 'Dashboard' },
-    { id: 'separacao', icon: '', label: 'Separação' },
-    { id: 'entregas', icon: '', label: 'Entregas' },
-    { id: 'roteirizacao', icon: '', label: 'Roteirização' }
+    { id: 'dashboard', icon: '📊', label: 'Dashboard' },
+    { id: 'separacao', icon: '📦', label: 'Separação' },
+    { id: 'entregas', icon: '🚚', label: 'Entregas' },
+    { id: 'roteirizacao', icon: '🗺️', label: 'Roteirização' }
   ];
   if (currentUser.funcao === 'admin') {
-    items.push({ id: 'funcionarios', icon: '', label: 'Funcionários' });
-    items.push({ id: 'usuarios', icon: '', label: 'Usuários' });
+    items.push({ id: 'funcionarios', icon: '👥', label: 'Funcionários' });
+    items.push({ id: 'usuarios', icon: '🔐', label: 'Usuários' });
     items.push({ id: 'relatorios', icon: '📄', label: 'Relatórios' });
   }
   items.forEach(function(it) {
@@ -396,7 +413,7 @@ function renderDashboard() {
       '<div class="stat-card danger"><div class="label">Atrasados</div><div class="value">' + atrasados + '</div></div>' +
     '</div>' +
     '<div class="dashboard-grid">' +
-      '<div class="table-card"><h3 class="card-title"> Últimos Pedidos</h3><div class="table-wrap"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Status</th><th>Separador</th><th>Data</th></tr></thead><tbody>' +
+      '<div class="table-card"><h3 class="card-title">📋 Últimos Pedidos</h3><div class="table-wrap"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Status</th><th>Separador</th><th>Data</th></tr></thead><tbody>' +
         (db.pedidos.length ? db.pedidos.slice(-20).reverse().map(function(p) { return '<tr><td>' + p.numero + '</td><td>' + p.cliente + '</td><td><span class="badge badge-' + p.status.toLowerCase().replace('_','-') + '">' + p.status + '</span></td><td>' + (p.separador || '-') + '</td><td>' + formatDT(p.dataSeparacao) + '</td></tr>'; }).join('') : '<tr><td colspan="5" style="text-align:center; padding: 30px;">Nenhum pedido</td></tr>') +
       '</tbody></table></div></div>' +
       '<div><div class="chart-grid"><div class="chart-card"><h3>Separações por Dia</h3><canvas id="chartSep"></canvas></div><div class="chart-card"><h3>Entregas por Dia</h3><canvas id="chartEnt"></canvas></div></div></div>' +
@@ -466,9 +483,19 @@ function confirmarRetiradaPedidos() {
   var count = 0;
   checkboxes.forEach(function(chk) {
     var p = db.pedidos.find(function(x) { return x.id === parseInt(chk.value); });
-    if (p && p.status === 'SEPARADO') { p.status = 'EM_ENTREGA'; p.entregador = currentUser.nome; p.entregadorId = currentUser.id; p.dataRetirada = new Date().toISOString(); p.fotoRetirada = null; count++; }
+    if (p && p.status === 'SEPARADO') { 
+      p.status = 'EM_ENTREGA'; 
+      p.entregador = currentUser.nome; 
+      p.entregadorId = currentUser.id; 
+      p.dataRetirada = new Date().toISOString(); 
+      p.fotoRetirada = null; 
+      count++; 
+    }
   });
-  saveDB(); toast(count + ' pedido(s) retirado(s) com sucesso', 'success'); renderEntregas();
+  saveDB(); 
+  toast(count + ' pedido(s) retirado(s) com sucesso', 'success'); 
+  // Navegar para roteirização
+  navigate('roteirizacao');
 }
 function renderListaEntregas() {
   var lista = db.pedidos.filter(function(p) { return p.status === 'EM_ENTREGA' && p.entregadorId === currentUser.id; });
@@ -485,9 +512,10 @@ function renderRoteirizacao() {
   if (currentUser.funcao !== 'entregador' && currentUser.funcao !== 'admin') { navigate('dashboard'); return; }
   var c = document.getElementById('content');
   c.innerHTML = '<div class="card"><h3 class="card-title">🗺️ Roteirização de Entregas</h3><div id="map" class="map-container"></div><div id="routeInfo"></div><div id="trackingControls"></div></div>';
-  setTimeout(function() { initMap(); }, 100);
+  setTimeout(function() { initMap(); }, 200);
 }
 function initMap() {
+  if (map) { map.remove(); map = null; }
   map = L.map('map').setView([-23.5505, -46.6333], 13);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
   renderRouteInfo();
@@ -553,7 +581,7 @@ function startTracking() {
 function stopTracking() {
   db.tracking.active = false; db.tracking.entregadorId = null; db.tracking.currentPosition = null; saveDB();
   if (trackingInterval) { clearInterval(trackingInterval); trackingInterval = null; }
-  if (userMarker) { map.removeLayer(userMarker); userMarker = null; }
+  if (map && userMarker) { map.removeLayer(userMarker); userMarker = null; }
   toast('Rastreamento parado', 'warning'); renderTrackingControls();
 }
 function updateTrackingPosition() {
@@ -563,7 +591,7 @@ function updateTrackingPosition() {
     db.tracking.currentPosition = { lat: lat, lon: lon }; db.tracking.lastUpdate = new Date().toISOString(); saveDB();
     if (map) {
       if (userMarker) { userMarker.setLatLng([lat, lon]); }
-      else { userMarker = L.marker([lat, lon], { icon: L.divIcon({ className: 'custom-div-icon', html: '<div style="background-color:#16a34a;width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);"></div>', iconSize: [20, 20], iconAnchor: [10, 10] }) }).addTo(map).bindPopup(' Sua posição'); }
+      else { userMarker = L.marker([lat, lon], { icon: L.divIcon({ className: 'custom-div-icon', html: '<div style="background-color:#16a34a;width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);"></div>', iconSize: [20, 20], iconAnchor: [10, 10] }) }).addTo(map).bindPopup('📍 Sua posição'); }
       map.setView([lat, lon], map.getZoom());
     }
     renderTrackingControls();
@@ -590,7 +618,7 @@ function renderHistList() {
   if (st) lista = lista.filter(function(p) { return p.status === st; });
   lista.sort(function(a, b) { return (b.dataSeparacao || '').localeCompare(a.dataSeparacao || ''); });
   var html = '<div class="table-wrap"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Endereço</th><th>Separador</th><th>Entregador</th><th>Status</th><th>Ações</th></tr></thead><tbody>' +
-    (lista.length ? lista.map(function(p) { return '<tr><td>' + p.numero + '</td><td>' + p.cliente + '</td><td>' + (p.endereco || '-') + '</td><td>' + (p.separador || '-') + '</td><td>' + (p.entregador || '-') + '</td><td><span class="badge badge-' + p.status.toLowerCase().replace('_','-') + '">' + p.status + '</span></td><td><button class="btn btn-sm" onclick="verDetalhes(' + p.id + ')"></button> <button class="btn btn-sm" onclick="verFotos(' + p.id + ')">📷</button></td></tr>'; }).join('') : '<tr><td colspan="7" style="text-align:center; padding: 30px;">Nenhum pedido encontrado</td></tr>') +
+    (lista.length ? lista.map(function(p) { return '<tr><td>' + p.numero + '</td><td>' + p.cliente + '</td><td>' + (p.endereco || '-') + '</td><td>' + (p.separador || '-') + '</td><td>' + (p.entregador || '-') + '</td><td><span class="badge badge-' + p.status.toLowerCase().replace('_','-') + '">' + p.status + '</span></td><td><button class="btn btn-sm" onclick="verDetalhes(' + p.id + ')">👁</button> <button class="btn btn-sm" onclick="verFotos(' + p.id + ')">📷</button></td></tr>'; }).join('') : '<tr><td colspan="7" style="text-align:center; padding: 30px;">Nenhum pedido encontrado</td></tr>') +
     '</tbody></table></div>';
   document.getElementById('histList').innerHTML = html;
 }
@@ -647,7 +675,7 @@ function delUsuario(id) { if (!confirm('Excluir usuário?')) return; db.users = 
 function renderRelatorios() {
   if (currentUser.funcao !== 'admin') { navigate('dashboard'); return; }
   var c = document.getElementById('content');
-  c.innerHTML = '<div class="card"><h3 class="card-title">Filtros do Relatório</h3><div class="filters"><input type="date" id="rIni"><input type="date" id="rFim"><input type="text" id="rCli" placeholder="Cliente"><input type="text" id="rPed" placeholder="Nº Pedido"><input type="text" id="rEnt" placeholder="Entregador"><input type="text" id="rSep" placeholder="Separador"></div><button class="btn" onclick="exportExcel()"> Exportar Excel</button> <button class="btn btn-danger" onclick="exportPDF()">📄 Exportar PDF</button></div><div class="card"><h3 class="card-title">Prévia</h3><div id="relPrev"></div></div>';
+  c.innerHTML = '<div class="card"><h3 class="card-title">Filtros do Relatório</h3><div class="filters"><input type="date" id="rIni"><input type="date" id="rFim"><input type="text" id="rCli" placeholder="Cliente"><input type="text" id="rPed" placeholder="Nº Pedido"><input type="text" id="rEnt" placeholder="Entregador"><input type="text" id="rSep" placeholder="Separador"></div><button class="btn" onclick="exportExcel()">📊 Exportar Excel</button> <button class="btn btn-danger" onclick="exportPDF()"> Exportar PDF</button></div><div class="card"><h3 class="card-title">Prévia</h3><div id="relPrev"></div></div>';
   updateRelPrev();
   ['rIni','rFim','rCli','rPed','rEnt','rSep'].forEach(function(id) { var el = document.getElementById(id); if (el) { el.addEventListener('input', updateRelPrev); el.addEventListener('change', updateRelPrev); } });
 }
@@ -740,27 +768,22 @@ function formatarCep(input) {
 function buscarClientePorCodigo(codigo) {
   if (!codigo) return null;
   
-  // Normalizar código (remover espaços, uppercase)
-  var codigoNorm = codigo.toString().trim().toUpperCase();
+  var codigoNorm = codigo.toString().trim().toUpperCase().replace(/[^0-9]/g, '');
   
-  // Busca exata primeiro
+  // Busca exata
   var cliente = db.clientes.find(function(c) { 
-    return c.codigo.toString().trim().toUpperCase() === codigoNorm; 
+    return c.codigo.toString().trim().toUpperCase().replace(/[^0-9]/g, '') === codigoNorm; 
   });
   if (cliente) return cliente;
   
-  // Busca aproximada (se o OCR leu errado)
+  // Busca aproximada
   var clientesPossiveis = db.clientes.filter(function(c) {
-    var codCliente = c.codigo.toString().trim().toUpperCase();
-    // Verificar se um contém o outro ou são muito similares
+    var codCliente = c.codigo.toString().trim().toUpperCase().replace(/[^0-9]/g, '');
     return codCliente.indexOf(codigoNorm) >= 0 || codigoNorm.indexOf(codCliente) >= 0;
   });
   
   if (clientesPossiveis.length === 1) return clientesPossiveis[0];
-  if (clientesPossiveis.length > 1) {
-    // Mostrar lista para o usuário escolher
-    return clientesPossiveis;
-  }
+  if (clientesPossiveis.length > 1) return clientesPossiveis;
   
   return null;
 }
@@ -770,7 +793,6 @@ function cadastrarClienteEPedido() {
   if (isProcessing) return;
   isProcessing = true;
   
-  // Ler todos os campos
   var numero = document.getElementById('ocrNum') ? document.getElementById('ocrNum').value.trim() : '';
   var codigo = document.getElementById('ocrCod') ? document.getElementById('ocrCod').value.trim() : '';
   var apelido = document.getElementById('clienteApelido') ? document.getElementById('clienteApelido').value.trim() : '';
@@ -784,7 +806,8 @@ function cadastrarClienteEPedido() {
   var cnpj = document.getElementById('clienteCnpj') ? document.getElementById('clienteCnpj').value.trim() : '';
   var telefone = document.getElementById('clienteTelefone') ? document.getElementById('clienteTelefone').value.trim() : '';
   
-  // Validar campos obrigatórios e destacar os vazios
+  console.log('Dados:', { numero, codigo, apelido, nome, rua, numeroEnd, bairro, cidade });
+  
   var camposObrigatorios = [
     { id: 'ocrNum', valor: numero, nome: 'Número do Pedido' },
     { id: 'ocrCod', valor: codigo, nome: 'Código do Cliente' },
@@ -806,7 +829,6 @@ function cadastrarClienteEPedido() {
     }
   });
   
-  // Se nome completo estiver vazio, usar o apelido
   if (!nome) {
     nome = apelido;
     var nomeEl = document.getElementById('clienteNome');
@@ -814,24 +836,23 @@ function cadastrarClienteEPedido() {
   }
   
   if (camposFaltando.length > 0) {
-    var msg = '️ Preencha os campos:\n\n• ' + camposFaltando.join('\n• ');
-    alert(msg);
+    alert('⚠️ Preencha os campos:\n\n• ' + camposFaltando.join('\n• '));
     toast('Preencha: ' + camposFaltando.join(', '), 'error');
     isProcessing = false;
     return;
   }
   
-  // Montar endereço completo
   var enderecoCompleto = rua + ', ' + numeroEnd;
   if (complemento) enderecoCompleto += ' - ' + complemento;
   enderecoCompleto += ' - ' + bairro + ', ' + cidade;
   if (cep) enderecoCompleto += ' (CEP: ' + cep + ')';
   
-  // Verificar se cliente já existe (pelo código)
-  var clienteExistente = db.clientes.find(function(c) { return c.codigo.toString().trim().toUpperCase() === codigo.toString().trim().toUpperCase(); });
+  var codigoNorm = codigo.toString().trim().toUpperCase().replace(/[^0-9]/g, '');
+  var clienteExistente = db.clientes.find(function(c) { 
+    return c.codigo.toString().trim().toUpperCase().replace(/[^0-9]/g, '') === codigoNorm; 
+  });
   
   if (clienteExistente) {
-    // Atualizar dados do cliente existente
     clienteExistente.apelido = apelido;
     clienteExistente.nome = nome;
     clienteExistente.cep = cep;
@@ -843,10 +864,10 @@ function cadastrarClienteEPedido() {
     clienteExistente.endereco = enderecoCompleto;
     if (cnpj) clienteExistente.cnpj = cnpj;
     if (telefone) clienteExistente.telefone = telefone;
+    console.log('Cliente atualizado:', clienteExistente);
     toast('Dados do cliente atualizados!', 'success');
   } else {
-    // Criar novo cliente
-    db.clientes.push({
+    var novoCliente = {
       codigo: codigo,
       apelido: apelido,
       nome: nome,
@@ -862,14 +883,16 @@ function cadastrarClienteEPedido() {
       dataCadastro: new Date().toISOString(),
       latitude: null,
       longitude: null
-    });
+    };
+    db.clientes.push(novoCliente);
+    console.log('Novo cliente cadastrado:', novoCliente);
     toast('Cliente cadastrado!', 'success');
   }
   
   saveDB();
+  console.log('DB após salvar - clientes:', db.clientes.length);
   
-  // Criar pedido
-  db.pedidos.push({
+  var pedido = {
     id: Date.now(),
     numero: numero,
     codigoCliente: codigo,
@@ -880,12 +903,18 @@ function cadastrarClienteEPedido() {
     dataSeparacao: new Date().toISOString(),
     status: 'SEPARADO',
     fotoSeparacao: fotoAtual || null
-  });
+  };
+  db.pedidos.push(pedido);
   saveDB();
+  console.log('Pedido criado:', pedido);
   
   toast('Pedido separado com sucesso!', 'success');
-  closeModal();
+  
+  // FECHAR MODAL CORRETAMENTE
+  stopCamera();
+  document.getElementById('modalContainer').innerHTML = '';
   isProcessing = false;
+  
   renderSeparacao();
 }
 
@@ -897,8 +926,12 @@ function confirmarPedidoCadastrado(modo, foto) {
   var codigo = document.getElementById('ocrCod').value.trim();
   if (!numero) { alert('Informe o número do pedido'); isProcessing = false; return; }
   
-  var cliente = db.clientes.find(function(c) { return c.codigo.toString().trim().toUpperCase() === codigo.toString().trim().toUpperCase(); });
-  db.pedidos.push({
+  var codigoNorm = codigo.toString().trim().toUpperCase().replace(/[^0-9]/g, '');
+  var cliente = db.clientes.find(function(c) { 
+    return c.codigo.toString().trim().toUpperCase().replace(/[^0-9]/g, '') === codigoNorm; 
+  });
+  
+  var pedido = {
     id: Date.now(),
     numero: numero,
     codigoCliente: codigo,
@@ -909,11 +942,18 @@ function confirmarPedidoCadastrado(modo, foto) {
     dataSeparacao: new Date().toISOString(),
     status: 'SEPARADO',
     fotoSeparacao: foto
-  });
+  };
+  db.pedidos.push(pedido);
   saveDB();
+  console.log('Pedido de cliente conhecido criado:', pedido);
+  
   toast('Pedido separado com sucesso', 'success');
-  closeModal();
+  
+  // FECHAR MODAL
+  stopCamera();
+  document.getElementById('modalContainer').innerHTML = '';
   isProcessing = false;
+  
   renderSeparacao();
 }
 
@@ -927,7 +967,7 @@ async function openCamera(modo) {
   currentCameraModo = modo;
   var isMobile = window.innerWidth <= 768;
   var overlayClass = isMobile ? 'modal-overlay camera-modal' : 'modal-overlay';
-  document.getElementById('modalContainer').innerHTML = '<div class="' + overlayClass + '" onclick="if(event.target===this)closeCamera()"><div class="modal"><h2>📷 ' + (modo === 'separacao' ? 'Fotografar Pedido' : 'Receber Pedido') + '</h2><div class="camera-wrapper"><div class="camera-container" id="camContainer"><div class="camera-hint">👆 Toque para fotografar</div><div class="camera-focus-ring" id="focusRing"></div><video id="camVideo" autoplay playsinline muted></video></div><div class="camera-controls"><button class="btn-capture" id="btnCapture" onclick="doCapture()">📷</button><button class="btn-cancel-cam" onclick="closeCamera()">✕ Cancelar</button></div><div id="ocrProgress" style="display:none;"><div class="ocr-progress"><div class="ocr-progress-bar" id="ocrBar" style="width:0%"></div></div></div><p id="ocrStatus" class="ocr-status" style="display:none;"></p></div></div></div>';
+  document.getElementById('modalContainer').innerHTML = '<div class="' + overlayClass + '" onclick="if(event.target===this)closeCamera()"><div class="modal"><h2>📷 ' + (modo === 'separacao' ? 'Fotografar Pedido' : 'Receber Pedido') + '</h2><div class="camera-wrapper"><div class="camera-container" id="camContainer"><div class="camera-hint">👆 Toque para fotografar</div><div class="camera-focus-ring" id="focusRing"></div><video id="camVideo" autoplay playsinline muted></video></div><div class="camera-controls"><button class="btn-capture" id="btnCapture" onclick="doCapture()">📷</button><button class="btn-cancel-cam" onclick="closeCamera()"> Cancelar</button></div><div id="ocrProgress" style="display:none;"><div class="ocr-progress"><div class="ocr-progress-bar" id="ocrBar" style="width:0%"></div></div></div><p id="ocrStatus" class="ocr-status" style="display:none;"></p></div></div></div>';
   try {
     var stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280, max: 1920 }, height: { ideal: 720, max: 1080 } }, audio: false });
     cameraStream = stream;
@@ -942,7 +982,7 @@ async function openCamera(modo) {
 function showFocusRing(e) { var ring = document.getElementById('focusRing'); if (!ring) return; var rect = e.currentTarget.getBoundingClientRect(); ring.style.left = (e.clientX - rect.left - 30) + 'px'; ring.style.top = (e.clientY - rect.top - 30) + 'px'; ring.classList.remove('active'); void ring.offsetWidth; ring.classList.add('active'); }
 function doCapture() { if (!cameraStream || isProcessing) return; capturePhoto(currentCameraModo); }
 function stopCamera() { if (cameraStream) { cameraStream.getTracks().forEach(function(t) { t.stop(); }); cameraStream = null; } }
-function closeCamera() { stopCamera(); document.getElementById('modalContainer').innerHTML = ''; }
+function closeCamera() { stopCamera(); document.getElementById('modalContainer').innerHTML = ''; isProcessing = false; }
 
 async function capturePhoto(modo) {
   if (isProcessing) return;
@@ -977,6 +1017,7 @@ async function capturePhoto(modo) {
     } catch (e) {}
     
     var dados = parseOCR(ocrResult.data.text);
+    console.log('OCR dados:', dados);
     
     if (barcodeResult && barcodeResult.text) {
       var bn = barcodeResult.text.replace(/[^0-9]/g, '').slice(-8);
@@ -990,31 +1031,28 @@ async function capturePhoto(modo) {
     fotoAtual = foto;
     modoAtual = modo;
     
-    // Buscar cliente com busca inteligente
     var resultadoBusca = buscarClientePorCodigo(dados.codigo);
+    console.log('Busca cliente:', resultadoBusca);
     
     if (Array.isArray(resultadoBusca)) {
-      // Múltiplos clientes encontrados - mostrar lista
       var listaHtml = resultadoBusca.map(function(c, idx) {
         return '<label class="checkbox-item"><input type="radio" name="clienteSelect" value="' + c.codigo + '" ' + (idx === 0 ? 'checked' : '') + '><div class="info"><div class="pedido-num">' + c.apelido + '</div><div class="pedido-cli">Código: ' + c.codigo + '</div><div class="pedido-cli">' + c.endereco + '</div></div></label>';
       }).join('');
       
       showModal('<h2>Cliente Encontrado</h2><p style="margin-bottom:15px;">Encontramos múltiplos clientes com código similar. Escolha o correto:</p>' + listaHtml + '<div class="form-group"><label>Número do Pedido</label><input id="ocrNum" value="' + dados.numero + '"></div><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-success" onclick="confirmarPedidoSelecionado(\'' + modo + '\', \'' + foto.replace(/'/g, "\\'") + '\')">✓ Confirmar</button></div>');
     } else if (resultadoBusca) {
-      // Cliente encontrado
       var endCompleto = resultadoBusca.rua + ', ' + resultadoBusca.numero + ' - ' + resultadoBusca.bairro + ', ' + resultadoBusca.cidade;
       if (resultadoBusca.cep) endCompleto += ' (CEP: ' + resultadoBusca.cep + ')';
       
       showModal('<h2>✅ Cliente Conhecido</h2><img src="' + foto + '" style="width:100%; max-height:150px; object-fit:contain; border-radius:8px; margin-bottom:15px;"><p style="margin-bottom:15px; color:var(--success); font-weight:700;">Cliente: <b>' + resultadoBusca.apelido + '</b></p><div class="form-group"><label>Número do Pedido</label><input id="ocrNum" value="' + dados.numero + '"></div><div class="form-group"><label>Código do Cliente</label><input value="' + dados.codigo + '" readonly></div><div class="form-group"><label>Cliente</label><input value="' + resultadoBusca.apelido + '" readonly></div><div class="form-group"><label>Endereço</label><textarea rows="2" readonly>' + endCompleto + '</textarea></div><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-success" onclick="confirmarPedidoCadastrado(\'' + modo + '\', \'' + foto.replace(/'/g, "\\'") + '\')">✓ Confirmar</button></div>');
     } else {
-      // Novo cliente - tela de cadastro com CEP
-      showModal('<h2> Novo Cliente</h2><p style="margin-bottom:15px; color:var(--warning); font-weight:700;">Primeiro pedido para este cliente. Complete o cadastro:</p>' +
+      showModal('<h2>📋 Novo Cliente</h2><p style="margin-bottom:15px; color:var(--warning); font-weight:700;">Primeiro pedido para este cliente. Complete o cadastro:</p>' +
         '<div class="form-group"><label>Nº do Pedido <span class="required">*</span></label><input id="ocrNum" value="' + dados.numero + '"></div>' +
         '<div class="form-group"><label>Código do Cliente <span class="required">*</span></label><input id="ocrCod" value="' + dados.codigo + '"></div>' +
         '<div class="form-group"><label>Apelido <span class="required">*</span> <small style="color:var(--text-soft); font-weight:600;">(nome resumido)</small></label><input id="clienteApelido" placeholder="Ex: Munhoz"></div>' +
         '<div class="form-group"><label>Nome Completo <small style="color:var(--text-soft); font-weight:600;">(opcional)</small></label><input id="clienteNome" placeholder="Razão social"></div>' +
-        '<div class="endereco-section"><h4>📍 Endereço</h4>' +
-          '<div class="form-group"><label>CEP</label><div class="cep-group"><input id="clienteCep" placeholder="00000-000" maxlength="9" oninput="formatarCep(this)"><button class="btn btn-sm" onclick="buscarCep()"></button></div><div id="cepStatus" class="cep-status"></div></div>' +
+        '<div class="endereco-section"><h4> Endereço</h4>' +
+          '<div class="form-group"><label>CEP</label><div class="cep-group"><input id="clienteCep" placeholder="00000-000" maxlength="9" oninput="formatarCep(this)"><button class="btn btn-sm" onclick="buscarCep()">🔍</button></div><div id="cepStatus" class="cep-status"></div></div>' +
           '<div class="form-group"><label>Rua <span class="required">*</span></label><input id="clienteRua" placeholder="Preenchido pelo CEP"></div>' +
           '<div class="endereco-row"><div class="form-group"><label>Número <span class="required">*</span></label><input id="clienteNumero" placeholder="Nº"></div><div class="form-group"><label>Complemento</label><input id="clienteComplemento" placeholder="Sala, Apto..."></div></div>' +
           '<div class="form-group"><label>Bairro <span class="required">*</span></label><input id="clienteBairro" placeholder="Preenchido pelo CEP"></div>' +
@@ -1044,7 +1082,7 @@ function confirmarPedidoSelecionado(modo, foto) {
   if (!codigoSelecionado) { toast('Selecione um cliente', 'error'); return; }
   
   var numero = document.getElementById('ocrNum').value.trim();
-  var cliente = db.clientes.find(function(c) { return c.codigo.toString().trim().toUpperCase() === codigoSelecionado.toString().trim().toUpperCase(); });
+  var cliente = db.clientes.find(function(c) { return c.codigo.toString().trim().toUpperCase().replace(/[^0-9]/g, '') === codigoSelecionado.toString().trim().toUpperCase().replace(/[^0-9]/g, ''); });
   
   db.pedidos.push({
     id: Date.now(),
@@ -1099,22 +1137,86 @@ function entradaManual(modo) {
   showModal('<h2>Inserir Manualmente</h2><div class="form-group"><label>Nº do Pedido <span class="required">*</span></label><input id="ocrNum"></div><div class="form-group"><label>Código <span class="required">*</span></label><input id="ocrCod"></div><div class="form-group"><label>Apelido <span class="required">*</span></label><input id="clienteApelido"></div><div class="form-group"><label>Nome Completo</label><input id="clienteNome"></div><div class="endereco-section"><h4>📍 Endereço</h4><div class="form-group"><label>CEP</label><div class="cep-group"><input id="clienteCep" maxlength="9" oninput="formatarCep(this)"><button class="btn btn-sm" onclick="buscarCep()">🔍</button></div><div id="cepStatus" class="cep-status"></div></div><div class="form-group"><label>Rua <span class="required">*</span></label><input id="clienteRua"></div><div class="endereco-row"><div class="form-group"><label>Número <span class="required">*</span></label><input id="clienteNumero"></div><div class="form-group"><label>Complemento</label><input id="clienteComplemento"></div></div><div class="form-group"><label>Bairro <span class="required">*</span></label><input id="clienteBairro"></div><div class="form-group"><label>Cidade - UF <span class="required">*</span></label><input id="clienteCidade"></div></div><div class="form-group"><label>CNPJ</label><input id="clienteCnpj"></div><div class="form-group"><label>Telefone</label><input id="clienteTelefone"></div><p style="font-size:12px; color:var(--text-soft); margin-bottom:15px;"><span class="required">*</span> = obrigatórios</p><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-success" onclick="cadastrarClienteEPedido()">✓ Confirmar</button></div>');
 }
 
-/* ============ PARSER OCR ============ */
+/* ============ PARSER OCR - COMPLETO ============ */
 function parseOCR(text) {
+  var linhas = text.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
   var t = text.toUpperCase();
-  var numero = '', codigo = '';
+  var numero = '', data = '', codigo = '', cliente = '', endereco = '';
+  
+  // 1. NÚMERO DO PEDIDO
   var mPedido = t.match(/(?:ABERIO|ABERTO|ABERT0|PEDIDO)\s*[-–]?\s*N[O0º°]?\s*([0-9]+)/);
   if (mPedido) { numero = mPedido[1].replace(/[^0-9]/g, ''); if (numero.length > 8) numero = numero.slice(-8); }
   if (!numero) { var mNum = t.match(/N[O0º°]\s*([0-9]{6,})/); if (mNum) { numero = mNum[1].replace(/[^0-9]/g, ''); if (numero.length > 8) numero = numero.slice(-8); } }
+  
+  // 2. DATA
+  var mData = t.match(/(\d{2}\/\d{2}\/\d{4})/);
+  if (mData) data = mData[1];
+  
+  // 3. CÓDIGO E CLIENTE
   var idxCupom = t.indexOf('CUPOM SEM VALOR FISCAL'); if (idxCupom < 0) idxCupom = t.indexOf('GUPOM');
-  if (idxCupom >= 0) { var mCod = text.substring(idxCupom).match(/^(\d{2,5})\s*[-–—]/m); if (mCod) codigo = mCod[1]; }
-  if (!codigo) { var mCod2 = t.match(/(\d{2,5})\s*[-–—]\s*[A-Z]/); if (mCod2) codigo = mCod2[1]; }
-  return { numero: numero, codigo: codigo };
+  if (idxCupom >= 0) { 
+    var textoApos = text.substring(idxCupom);
+    var linhasApos = textoApos.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0 && l.length < 150; });
+    for (var i = 0; i < linhasApos.length; i++) {
+      var linha = linhasApos[i];
+      var mCliente = linha.match(/^(\d{2,5})\s*[-–—]\s*(.+?)(?:\s*[-–]\s*LIDA?\s*$|\s*LIDA?\s*$|\s*ME\s*$|\s*EPP\s*$|$)/i);
+      if (mCliente) {
+        codigo = mCliente[1];
+        cliente = mCliente[2].trim();
+        cliente = cliente.replace(/\s*[-–]\s*LIDA?\s*$/i, '').replace(/\s*LIDA?\s*$/i, '').replace(/\s*LTDA\.?\s*$/i, '').replace(/\s*ME\s*$/i, '').replace(/\s*EPP\s*$/i, '').replace(/[|&]/g, '').trim();
+        break;
+      }
+    }
+    if (!codigo) {
+      for (var i = 0; i < linhasApos.length; i++) {
+        var linha = linhasApos[i];
+        var mNum = linha.match(/^(\d{2,5})\s+/);
+        if (mNum && linha.length > 5) {
+          codigo = mNum[1];
+          cliente = linha.replace(/^\d{2,5}\s+[-–—]?\s*/, '').trim();
+          cliente = cliente.replace(/\s*[-–]\s*LIDA?\s*$/i, '').replace(/\s*LIDA?\s*$/i, '').replace(/\s*LTDA\.?\s*$/i, '').replace(/[|&]/g, '').trim();
+          break;
+        }
+      }
+    }
+  }
+  
+  // 4. ENDEREÇO
+  var mEnd = t.match(/(?:AVENTIDA|AVENIDA|AVENI0A|AV\s|RUA|ALAMEDA|ESTRADA|TRAVESSA)\s+[A-Z0-9\s,]+?\d{3,}/);
+  if (mEnd) {
+    endereco = mEnd[0].trim().replace(/[|&]/g, '').trim();
+    var idxEnd = t.indexOf(mEnd[0]);
+    var restoEnd = t.substring(idxEnd + mEnd[0].length, idxEnd + mEnd[0].length + 200);
+    var mCid = restoEnd.match(/([A-ZÁÉÍÓÚÂÊÔÃÕÇ]{3,}(?:\s+[A-ZÁÉÍÓÚÂÊÔÃÕÇ]+)?)\s*[-–]\s*([A-Z]{2})\s*[-–]?\s*\(?\d{2}\)?\s*[\d\-]{7,}/);
+    if (mCid) {
+      var cidade = mCid[1].trim();
+      var estado = mCid[2].trim();
+      if (cidade.length >= 3 && !cidade.match(/PEDIDO|ABERTO|FISCAL|CUPOM/i)) {
+        endereco = endereco + ' / ' + cidade + ' - ' + estado;
+      }
+    }
+    var mCep = restoEnd.match(/CEP[:\s]*([0-9]{5}-?[0-9]{3})/);
+    if (!mCep) mCep = t.match(/CEP[:\s]*([0-9]{5}-?[0-9]{3})/);
+    if (mCep) endereco += ' / CEP: ' + mCep[1];
+  }
+  
+  if (cliente) {
+    cliente = cliente.replace(/\s*LTDA\.?\s*$/i, '').replace(/\s*LIDA\.?\s*$/i, '').replace(/\s*ME\s*$/i, '').replace(/\s*EPP\s*$/i, '').replace(/[|&]/g, '').replace(/\s+/g, ' ').trim();
+  }
+  endereco = endereco.replace(/[|&]/g, '').replace(/\s+/g, ' ').trim();
+  
+  return { numero: numero, data: data, codigo: codigo, cliente: cliente, endereco: endereco };
 }
 
 /* ============ MODAL ============ */
-function showModal(html) { document.getElementById('modalContainer').innerHTML = '<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal">' + html + '</div></div>'; }
-function closeModal() { stopCamera(); document.getElementById('modalContainer').innerHTML = ''; isProcessing = false; }
+function showModal(html) { 
+  document.getElementById('modalContainer').innerHTML = '<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal">' + html + '</div></div>'; 
+}
+function closeModal() { 
+  stopCamera(); 
+  document.getElementById('modalContainer').innerHTML = ''; 
+  isProcessing = false; 
+}
 
 /* ============ UTILS ============ */
 function formatDT(iso) { if (!iso) return '-'; var d = new Date(iso); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
