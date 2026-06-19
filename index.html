@@ -213,7 +213,7 @@ tr:hover { background: var(--surface-2); }
 
 <div id="loginScreen" class="login-wrap">
   <div class="login-box">
-    <h1> Separação & Entrega</h1>
+    <h1>📦 Separação & Entrega</h1>
     <p class="sub">Sistema de Controle de Pedidos</p>
     <div class="form-group"><label>Usuário</label><input type="text" id="loginUser" placeholder="Digite seu usuário"></div>
     <div class="form-group"><label>Senha</label><input type="password" id="loginPass" placeholder="Digite sua senha"></div>
@@ -246,7 +246,7 @@ tr:hover { background: var(--surface-2); }
 
 <script>
 /* ============ ESTADO ============ */
-const DB_KEY = 'sep_entrega_db_v14';
+const DB_KEY = 'sep_entrega_db_v15';
 let db = {
   users: [
     { id: 1, login: 'admin', pass: 'admin', nome: 'Administrador', funcao: 'admin', ativo: true },
@@ -274,12 +274,41 @@ let fotoAtual = null;
 let modoAtual = null;
 let isProcessing = false;
 
+// Funções globais
+window.doLogin = doLogin;
+window.doLogout = doLogout;
+window.toggleTheme = toggleTheme;
+window.toggleSidebar = toggleSidebar;
+window.openCamera = openCamera;
+window.doCapture = doCapture;
+window.closeCamera = closeCamera;
+window.buscarCep = buscarCep;
+window.formatarCep = formatarCep;
+window.cadastrarClienteEPedido = cadastrarClienteEPedido;
+window.confirmarPedidoCadastrado = confirmarPedidoCadastrado;
+window.confirmarPedidoSelecionado = confirmarPedidoSelecionado;
+window.confirmarRetiradaPedidos = confirmarRetiradaPedidos;
+window.marcarEntregue = marcarEntregue;
+window.marcarProblema = marcarProblema;
+window.startTracking = startTracking;
+window.stopTracking = stopTracking;
+window.exportExcel = exportExcel;
+window.exportPDF = exportPDF;
+window.verDetalhes = verDetalhes;
+window.verFotos = verFotos;
+window.formFuncionario = formFuncionario;
+window.saveFuncionario = saveFuncionario;
+window.delFuncionario = delFuncionario;
+window.formUsuario = formUsuario;
+window.saveUsuario = saveUsuario;
+window.delUsuario = delUsuario;
+window.closeModal = closeModal;
+
 function loadDB() {
   const saved = localStorage.getItem(DB_KEY);
   if (saved) { 
     try { 
       db = JSON.parse(saved); 
-      console.log('DB carregado:', db.clientes ? db.clientes.length + ' clientes' : 'sem clientes');
     } catch(e) { console.error('Erro ao carregar DB:', e); } 
   }
   if (!db.clientes) db.clientes = [];
@@ -288,31 +317,31 @@ function loadDB() {
     saveDB(); 
   }
 }
+
 function saveDB() { 
   try {
     localStorage.setItem(DB_KEY, JSON.stringify(db)); 
-    console.log('DB salvo com sucesso');
   } catch(e) {
     console.error('Erro ao salvar DB:', e);
-    alert('Erro ao salvar dados: ' + e.message);
   }
 }
 
 function showLoading() { document.getElementById('loadingOverlay').classList.remove('hidden'); }
 function hideLoading() { document.getElementById('loadingOverlay').classList.add('hidden'); }
 
-function toast(msg, type = 'info') {
+function toast(msg, type) {
+  if (!type) type = 'info';
   const t = document.createElement('div');
   t.className = 'toast ' + type;
   t.textContent = msg;
   document.getElementById('toastContainer').appendChild(t);
-  setTimeout(() => t.remove(), 4000);
+  setTimeout(function() { t.remove(); }, 4000);
 }
 
 function doLogin() {
-  const u = document.getElementById('loginUser').value.trim();
-  const p = document.getElementById('loginPass').value.trim();
-  const user = db.users.find(x => x.login === u && x.pass === p && x.ativo);
+  var u = document.getElementById('loginUser').value.trim();
+  var p = document.getElementById('loginPass').value.trim();
+  var user = db.users.find(function(x) { return x.login === u && x.pass === p && x.ativo; });
   if (!user) { toast('Usuário ou senha inválidos', 'error'); return; }
   currentUser = user;
   sessionStorage.setItem('currentUser', JSON.stringify(user));
@@ -322,8 +351,6 @@ function doLogin() {
 }
 
 function doLogout() {
-  console.log('Fazendo logout...');
-  // Parar tracking se existir map
   if (map && trackingInterval) {
     clearInterval(trackingInterval);
     trackingInterval = null;
@@ -332,7 +359,6 @@ function doLogout() {
     map.removeLayer(userMarker);
     userMarker = null;
   }
-  // Resetar tracking no DB
   db.tracking = { active: false, entregadorId: null, currentPosition: null, lastUpdate: null };
   saveDB();
   
@@ -341,29 +367,28 @@ function doLogout() {
   document.getElementById('appScreen').classList.add('hidden');
   document.getElementById('loginScreen').classList.remove('hidden');
   stopCamera();
-  // Limpar modal
   document.getElementById('modalContainer').innerHTML = '';
-  console.log('Logout concluído');
 }
 
 function toggleTheme() {
-  const cur = document.documentElement.getAttribute('data-theme');
-  const next = cur === 'dark' ? 'light' : 'dark';
+  var cur = document.documentElement.getAttribute('data-theme');
+  var next = cur === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', next);
   localStorage.setItem('theme', next);
 }
+
 function loadTheme() {
-  const t = localStorage.getItem('theme') || 'light';
+  var t = localStorage.getItem('theme') || 'light';
   document.documentElement.setAttribute('data-theme', t);
 }
 
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
 
 function buildNav() {
-  const nav = document.getElementById('navMenu');
+  var nav = document.getElementById('navMenu');
   nav.innerHTML = '';
   document.getElementById('userInfo').innerHTML = '<b>' + currentUser.nome + '</b><br>' + currentUser.funcao.toUpperCase();
-  const items = [
+  var items = [
     { id: 'dashboard', icon: '📊', label: 'Dashboard' },
     { id: 'separacao', icon: '📦', label: 'Separação' },
     { id: 'entregas', icon: '🚚', label: 'Entregas' },
@@ -375,13 +400,14 @@ function buildNav() {
     items.push({ id: 'relatorios', icon: '📄', label: 'Relatórios' });
   }
   items.forEach(function(it) {
-    const el = document.createElement('div');
+    var el = document.createElement('div');
     el.className = 'nav-item' + (currentView === it.id ? ' active' : '');
     el.innerHTML = '<span class="icon">' + it.icon + '</span>' + it.label;
     el.onclick = function() { navigate(it.id); };
     nav.appendChild(el);
   });
 }
+
 function navigate(view) {
   currentView = view;
   buildNav();
@@ -390,13 +416,20 @@ function navigate(view) {
 }
 
 function renderView() {
-  const titles = { dashboard: 'Dashboard', separacao: 'Tela de Separação', entregas: 'Tela de Entregas', roteirizacao: 'Roteirização', funcionarios: 'Cadastro de Funcionários', usuarios: 'Cadastro de Usuários', relatorios: 'Relatórios' };
+  var titles = { dashboard: 'Dashboard', separacao: 'Tela de Separação', entregas: 'Tela de Entregas', roteirizacao: 'Roteirização', funcionarios: 'Cadastro de Funcionários', usuarios: 'Cadastro de Usuários', relatorios: 'Relatórios' };
   document.getElementById('pageTitle').textContent = titles[currentView] || '';
-  var fn = { dashboard: renderDashboard, separacao: renderSeparacao, entregas: renderEntregas, roteirizacao: renderRoteirizacao, funcionarios: renderFuncionarios, usuarios: renderUsuarios, relatorios: renderRelatorios };
+  var fn = { 
+    dashboard: renderDashboard, 
+    separacao: renderSeparacao, 
+    entregas: renderEntregas, 
+    roteirizacao: renderRoteirizacao, 
+    funcionarios: renderFuncionarios, 
+    usuarios: renderUsuarios, 
+    relatorios: renderRelatorios 
+  };
   if (fn[currentView]) fn[currentView]();
 }
 
-/* ============ DASHBOARD ============ */
 function renderDashboard() {
   var hoje = new Date().toDateString();
   var sepHoje = db.pedidos.filter(function(p) { return new Date(p.dataSeparacao).toDateString() === hoje; }).length;
@@ -432,7 +465,6 @@ function renderDashboard() {
   new Chart(document.getElementById('chartEnt'), { type: 'bar', data: { labels: dias, datasets: [{ label: 'Entregas', data: entData, backgroundColor: '#16a34a' }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: txtColor, font: { size: 10 } } }, y: { ticks: { color: txtColor, font: { size: 10 } }, beginAtZero: true } } } });
 }
 
-/* ============ SEPARAÇÃO ============ */
 function renderSeparacao() {
   var c = document.getElementById('content');
   var podeEditar = (currentUser.funcao === 'admin' || currentUser.funcao === 'separador');
@@ -442,6 +474,7 @@ function renderSeparacao() {
     '</div><div class="card"><h3 class="card-title">Pedidos Separados</h3><div class="filters"><input type="text" id="fSepNum" placeholder="Nº Pedido" oninput="renderSepList()"><input type="text" id="fSepCli" placeholder="Cliente" oninput="renderSepList()"><input type="text" id="fSepSep" placeholder="Separador" oninput="renderSepList()"><input type="date" id="fSepData" onchange="renderSepList()"></div><div id="sepList"></div></div>';
   renderSepList();
 }
+
 function renderSepList() {
   var num = (document.getElementById('fSepNum') ? document.getElementById('fSepNum').value : '').toLowerCase();
   var cli = (document.getElementById('fSepCli') ? document.getElementById('fSepCli').value : '').toLowerCase();
@@ -458,7 +491,6 @@ function renderSepList() {
   document.getElementById('sepList').innerHTML = html;
 }
 
-/* ============ ENTREGAS ============ */
 function renderEntregas() {
   var c = document.getElementById('content');
   var podeEditar = (currentUser.funcao === 'admin' || currentUser.funcao === 'entregador');
@@ -469,6 +501,7 @@ function renderEntregas() {
     '</div><div class="card"><h3 class="card-title">Pedidos em Entrega</h3><div id="listaEntregas"></div></div>';
   renderListaEntregas();
 }
+
 function renderListaSelecao(pedidos) {
   if (!pedidos.length) return '<p style="color:var(--text-soft); font-size:14px;">Nenhum pedido disponível para entrega</p>';
   var html = '';
@@ -477,6 +510,7 @@ function renderListaSelecao(pedidos) {
   });
   return html;
 }
+
 function confirmarRetiradaPedidos() {
   var checkboxes = document.querySelectorAll('.chk-pedido:checked');
   if (!checkboxes.length) { toast('Selecione pelo menos um pedido', 'warning'); return; }
@@ -495,7 +529,6 @@ function confirmarRetiradaPedidos() {
   saveDB(); 
   toast(count + ' pedido(s) retirado(s) com sucesso', 'success');
   
-  // Aguardar o toast aparecer e depois navegar
   setTimeout(function() {
     currentView = 'roteirizacao';
     buildNav();
@@ -503,6 +536,7 @@ function confirmarRetiradaPedidos() {
     if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
   }, 500);
 }
+
 function renderListaEntregas() {
   var lista = db.pedidos.filter(function(p) { return p.status === 'EM_ENTREGA' && p.entregadorId === currentUser.id; });
   var html = '<div class="table-wrap"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Endereço</th><th>Retirada</th><th>Status</th><th>Ações</th></tr></thead><tbody>' +
@@ -510,16 +544,37 @@ function renderListaEntregas() {
     '</tbody></table></div>';
   document.getElementById('listaEntregas').innerHTML = html;
 }
-function marcarEntregue(id) { var p = db.pedidos.find(function(x) { return x.id === id; }); if (!p) return; p.status = 'ENTREGUE'; p.dataEntrega = new Date().toISOString(); saveDB(); toast('Pedido marcado como ENTREGUE', 'success'); renderListaEntregas(); }
-function marcarProblema(id) { var p = db.pedidos.find(function(x) { return x.id === id; }); if (!p) return; var motivo = prompt('Descreva o problema na entrega:'); if (!motivo) return; p.status = 'PROBLEMA'; p.motivoProblema = motivo; p.dataProblema = new Date().toISOString(); saveDB(); toast('Problema registrado', 'warning'); renderListaEntregas(); }
 
-/* ============ ROTEIRIZAÇÃO ============ */
+function marcarEntregue(id) { 
+  var p = db.pedidos.find(function(x) { return x.id === id; }); 
+  if (!p) return; 
+  p.status = 'ENTREGUE'; 
+  p.dataEntrega = new Date().toISOString(); 
+  saveDB(); 
+  toast('Pedido marcado como ENTREGUE', 'success'); 
+  renderListaEntregas(); 
+}
+
+function marcarProblema(id) { 
+  var p = db.pedidos.find(function(x) { return x.id === id; }); 
+  if (!p) return; 
+  var motivo = prompt('Descreva o problema na entrega:'); 
+  if (!motivo) return; 
+  p.status = 'PROBLEMA'; 
+  p.motivoProblema = motivo; 
+  p.dataProblema = new Date().toISOString(); 
+  saveDB(); 
+  toast('Problema registrado', 'warning'); 
+  renderListaEntregas(); 
+}
+
 function renderRoteirizacao() {
   if (currentUser.funcao !== 'entregador' && currentUser.funcao !== 'admin') { navigate('dashboard'); return; }
   var c = document.getElementById('content');
   c.innerHTML = '<div class="card"><h3 class="card-title">🗺️ Roteirização de Entregas</h3><div id="map" class="map-container"></div><div id="routeInfo"></div><div id="trackingControls"></div></div>';
   setTimeout(function() { initMap(); }, 200);
 }
+
 function initMap() {
   if (map) { map.remove(); map = null; }
   map = L.map('map').setView([-23.5505, -46.6333], 13);
@@ -527,6 +582,7 @@ function initMap() {
   renderRouteInfo();
   renderTrackingControls();
 }
+
 async function renderRouteInfo() {
   var pedidosEntrega = db.pedidos.filter(function(p) { return p.status === 'EM_ENTREGA' && p.entregadorId === currentUser.id; });
   if (!pedidosEntrega.length) { document.getElementById('routeInfo').innerHTML = '<p style="color:var(--text-soft); text-align:center; padding:40px;">Nenhum pedido em entrega</p>'; return; }
@@ -547,10 +603,12 @@ async function renderRouteInfo() {
   document.getElementById('routeInfo').innerHTML = html;
   showRouteOnMap(optimizedRoute);
 }
+
 async function geocodeAddress(address) {
   try { var response = await fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(address) + '&limit=1'); var data = await response.json(); if (data && data.length > 0) { return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) }; } } catch (e) { console.error('Erro geocodificação:', e); }
   return null;
 }
+
 function optimizeRoute(pedidos) {
   if (pedidos.length <= 1) return pedidos;
   var optimized = [pedidos[0]]; var remaining = pedidos.slice(1);
@@ -561,11 +619,13 @@ function optimizeRoute(pedidos) {
   }
   return optimized;
 }
+
 function calculateDistance(lat1, lon1, lat2, lon2) {
   var R = 6371; var dLat = (lat2 - lat1) * Math.PI / 180; var dLon = (lon2 - lon1) * Math.PI / 180;
   var a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
+
 function showRouteOnMap(pedidos) {
   routeMarkers.forEach(function(m) { map.removeLayer(m); }); routeMarkers = [];
   if (deliveryPolyline) map.removeLayer(deliveryPolyline);
@@ -574,22 +634,26 @@ function showRouteOnMap(pedidos) {
   if (latlngs.length > 1) { deliveryPolyline = L.polyline(latlngs, {color: '#2563eb', weight: 4, opacity: 0.7}).addTo(map); map.fitBounds(deliveryPolyline.getBounds(), {padding: [50, 50]}); }
   else if (latlngs.length === 1) { map.setView(latlngs[0], 15); }
 }
+
 function renderTrackingControls() {
   var isTracking = db.tracking.active && db.tracking.entregadorId === currentUser.id;
   var html = isTracking ? '<div class="tracking-status"><div class="tracking-dot"></div><div><b>Rastreamento Ativo</b><br>Atualizado: ' + (db.tracking.lastUpdate ? new Date(db.tracking.lastUpdate).toLocaleTimeString() : 'Agora') + '</div></div><button class="btn btn-danger btn-block" onclick="stopTracking()">⏹️ Parar Rastreamento</button>' : '<div class="tracking-status inactive"><div>Rastreamento inativo</div></div>';
   document.getElementById('trackingControls').innerHTML = html;
 }
+
 function startTracking() {
   db.tracking.active = true; db.tracking.entregadorId = currentUser.id; db.tracking.lastUpdate = new Date().toISOString(); saveDB();
   if (navigator.geolocation) { trackingInterval = setInterval(updateTrackingPosition, 5000); updateTrackingPosition(); toast('Rastreamento iniciado!', 'success'); renderTrackingControls(); }
   else { toast('Geolocalização não suportada', 'error'); }
 }
+
 function stopTracking() {
   db.tracking.active = false; db.tracking.entregadorId = null; db.tracking.currentPosition = null; saveDB();
   if (trackingInterval) { clearInterval(trackingInterval); trackingInterval = null; }
   if (map && userMarker) { map.removeLayer(userMarker); userMarker = null; }
   toast('Rastreamento parado', 'warning'); renderTrackingControls();
 }
+
 function updateTrackingPosition() {
   if (!navigator.geolocation) return;
   navigator.geolocation.getCurrentPosition(function(position) {
@@ -604,12 +668,12 @@ function updateTrackingPosition() {
   }, function(error) { console.error('Erro geolocalização:', error); }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
 }
 
-/* ============ HISTÓRICO ============ */
 function renderHistorico() {
   var c = document.getElementById('content');
   c.innerHTML = '<div class="card"><h3 class="card-title">Histórico Completo</h3><div class="filters"><input type="text" id="fHistNum" placeholder="Nº Pedido" oninput="renderHistList()"><input type="text" id="fHistCli" placeholder="Cliente" oninput="renderHistList()"><input type="date" id="fHistIni" onchange="renderHistList()"><input type="date" id="fHistFim" onchange="renderHistList()"><select id="fHistStatus" onchange="renderHistList()"><option value="">Todos Status</option><option>SEPARADO</option><option>EM_ENTREGA</option><option>ENTREGUE</option><option>PROBLEMA</option></select></div><div id="histList"></div></div>';
   renderHistList();
 }
+
 function renderHistList() {
   var num = (document.getElementById('fHistNum') ? document.getElementById('fHistNum').value : '').toLowerCase();
   var cli = (document.getElementById('fHistCli') ? document.getElementById('fHistCli').value : '').toLowerCase();
@@ -628,16 +692,17 @@ function renderHistList() {
     '</tbody></table></div>';
   document.getElementById('histList').innerHTML = html;
 }
+
 function verDetalhes(id) {
   var p = db.pedidos.find(function(x) { return x.id === id; }); if (!p) return;
   showModal('<h2>Detalhes do Pedido ' + p.numero + '</h2><p><b>Cliente:</b> ' + p.cliente + ' (' + (p.codigoCliente || '-') + ')</p><p><b>Endereço:</b> ' + (p.endereco || '-') + '</p><hr style="margin:10px 0; border-color:var(--border);"><p><b>Separador:</b> ' + (p.separador || '-') + '</p><p><b>Data/Hora Separação:</b> ' + formatDT(p.dataSeparacao) + '</p><hr style="margin:10px 0; border-color:var(--border);"><p><b>Entregador:</b> ' + (p.entregador || '-') + '</p><p><b>Data/Hora Retirada:</b> ' + formatDT(p.dataRetirada) + '</p><p><b>Data/Hora Entrega:</b> ' + formatDT(p.dataEntrega) + '</p><p><b>Status:</b> <span class="badge badge-' + p.status.toLowerCase().replace('_','-') + '">' + p.status + '</span></p>' + (p.motivoProblema ? '<p><b>Problema:</b> ' + p.motivoProblema + '</p>' : '') + '<div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Fechar</button></div>');
 }
+
 function verFotos(id) {
   var p = db.pedidos.find(function(x) { return x.id === id; }); if (!p) return;
   showModal('<h2>Fotos do Pedido ' + p.numero + '</h2>' + (p.fotoSeparacao ? '<h4 style="margin-top:10px;">Foto da Separação</h4><img src="' + p.fotoSeparacao + '" style="width:100%; border-radius:8px; margin-top:5px;">' : '') + (p.fotoRetirada ? '<h4 style="margin-top:15px;">Foto da Retirada</h4><img src="' + p.fotoRetirada + '" style="width:100%; border-radius:8px; margin-top:5px;">' : '') + (!p.fotoSeparacao && !p.fotoRetirada ? '<p>Sem fotos registradas</p>' : '') + '<div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Fechar</button></div>');
 }
 
-/* ============ FUNCIONÁRIOS ============ */
 function renderFuncionarios() {
   if (currentUser.funcao !== 'admin') { navigate('dashboard'); return; }
   var c = document.getElementById('content');
@@ -645,19 +710,21 @@ function renderFuncionarios() {
     (db.funcionarios.map(function(f) { return '<tr><td>' + f.nome + '</td><td>' + f.matricula + '</td><td>' + f.funcao + '</td><td>' + (f.telefone || '-') + '</td><td><span class="badge ' + (f.ativo ? 'badge-entregue' : 'badge-problema') + '">' + (f.ativo ? 'ATIVO' : 'INATIVO') + '</span></td><td><button class="btn btn-sm" onclick="formFuncionario(' + f.id + ')">✏</button> <button class="btn btn-sm btn-danger" onclick="delFuncionario(' + f.id + ')">🗑</button></td></tr>'; }).join('') || '<tr><td colspan="6" style="text-align:center; padding: 30px;">Nenhum funcionário</td></tr>') +
     '</tbody></table></div></div>';
 }
+
 function formFuncionario(id) {
   var f = id ? db.funcionarios.find(function(x) { return x.id === id; }) : { nome: '', matricula: '', funcao: 'separador', telefone: '', ativo: true };
   showModal('<h2>' + (id ? 'Editar' : 'Novo') + ' Funcionário</h2><div class="form-group"><label>Nome Completo</label><input id="fNome" value="' + (f.nome || '') + '"></div><div class="form-group"><label>Matrícula</label><input id="fMat" value="' + (f.matricula || '') + '"></div><div class="form-group"><label>Função</label><select id="fFun"><option value="separador"' + (f.funcao==='separador'?' selected':'') + '>Separador</option><option value="entregador"' + (f.funcao==='entregador'?' selected':'') + '>Entregador</option><option value="vendedor"' + (f.funcao==='vendedor'?' selected':'') + '>Vendedor</option><option value="administrativo"' + (f.funcao==='administrativo'?' selected':'') + '>Administrativo</option></select></div><div class="form-group"><label>Telefone</label><input id="fTel" value="' + (f.telefone || '') + '"></div><div class="form-group"><label>Status</label><select id="fAtivo"><option value="true"' + (f.ativo?' selected':'') + '>Ativo</option><option value="false"' + (!f.ativo?' selected':'') + '>Inativo</option></select></div><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-success" onclick="saveFuncionario(' + (id || 'null') + ')">Salvar</button></div>');
 }
+
 function saveFuncionario(id) {
   var data = { nome: document.getElementById('fNome').value.trim(), matricula: document.getElementById('fMat').value.trim(), funcao: document.getElementById('fFun').value, telefone: document.getElementById('fTel').value.trim(), ativo: document.getElementById('fAtivo').value === 'true' };
   if (!data.nome || !data.matricula) { toast('Preencha nome e matrícula', 'error'); return; }
   if (id) { var f = db.funcionarios.find(function(x) { return x.id === id; }); Object.assign(f, data); } else { data.id = Date.now(); db.funcionarios.push(data); }
   saveDB(); closeModal(); renderFuncionarios(); toast('Funcionário salvo', 'success');
 }
+
 function delFuncionario(id) { if (!confirm('Excluir funcionário?')) return; db.funcionarios = db.funcionarios.filter(function(x) { return x.id !== id; }); saveDB(); renderFuncionarios(); toast('Funcionário excluído', 'success'); }
 
-/* ============ USUÁRIOS ============ */
 function renderUsuarios() {
   if (currentUser.funcao !== 'admin') { navigate('dashboard'); return; }
   var c = document.getElementById('content');
@@ -665,26 +732,29 @@ function renderUsuarios() {
     db.users.map(function(u) { return '<tr><td>' + u.login + '</td><td>' + u.nome + '</td><td>' + u.funcao + '</td><td><span class="badge ' + (u.ativo ? 'badge-entregue' : 'badge-problema') + '">' + (u.ativo ? 'ATIVO' : 'INATIVO') + '</span></td><td><button class="btn btn-sm" onclick="formUsuario(' + u.id + ')">✏</button>' + (u.id !== currentUser.id ? ' <button class="btn btn-sm btn-danger" onclick="delUsuario(' + u.id + ')"></button>' : '') + '</td></tr>'; }).join('') +
     '</tbody></table></div></div>';
 }
+
 function formUsuario(id) {
   var u = id ? db.users.find(function(x) { return x.id === id; }) : { login: '', pass: '', nome: '', funcao: 'vendedor', ativo: true };
   showModal('<h2>' + (id ? 'Editar' : 'Novo') + ' Usuário</h2><div class="form-group"><label>Login</label><input id="uLogin" value="' + (u.login || '') + '"></div><div class="form-group"><label>Senha</label><input id="uPass" value="' + (u.pass || '') + '"></div><div class="form-group"><label>Nome</label><input id="uNome" value="' + (u.nome || '') + '"></div><div class="form-group"><label>Função</label><select id="uFun"><option value="admin"' + (u.funcao==='admin'?' selected':'') + '>Administrador</option><option value="separador"' + (u.funcao==='separador'?' selected':'') + '>Separador</option><option value="entregador"' + (u.funcao==='entregador'?' selected':'') + '>Entregador</option><option value="vendedor"' + (u.funcao==='vendedor'?' selected':'') + '>Vendedor</option></select></div><div class="form-group"><label>Status</label><select id="uAtivo"><option value="true"' + (u.ativo?' selected':'') + '>Ativo</option><option value="false"' + (!u.ativo?' selected':'') + '>Inativo</option></select></div><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-success" onclick="saveUsuario(' + (id || 'null') + ')">Salvar</button></div>');
 }
+
 function saveUsuario(id) {
   var data = { login: document.getElementById('uLogin').value.trim(), pass: document.getElementById('uPass').value.trim(), nome: document.getElementById('uNome').value.trim(), funcao: document.getElementById('uFun').value, ativo: document.getElementById('uAtivo').value === 'true' };
   if (!data.login || !data.pass || !data.nome) { toast('Preencha todos os campos', 'error'); return; }
   if (id) { var u = db.users.find(function(x) { return x.id === id; }); Object.assign(u, data); } else { data.id = Date.now(); db.users.push(data); }
   saveDB(); closeModal(); renderUsuarios(); toast('Usuário salvo', 'success');
 }
+
 function delUsuario(id) { if (!confirm('Excluir usuário?')) return; db.users = db.users.filter(function(x) { return x.id !== id; }); saveDB(); renderUsuarios(); toast('Usuário excluído', 'success'); }
 
-/* ============ RELATÓRIOS ============ */
 function renderRelatorios() {
   if (currentUser.funcao !== 'admin') { navigate('dashboard'); return; }
   var c = document.getElementById('content');
-  c.innerHTML = '<div class="card"><h3 class="card-title">Filtros do Relatório</h3><div class="filters"><input type="date" id="rIni"><input type="date" id="rFim"><input type="text" id="rCli" placeholder="Cliente"><input type="text" id="rPed" placeholder="Nº Pedido"><input type="text" id="rEnt" placeholder="Entregador"><input type="text" id="rSep" placeholder="Separador"></div><button class="btn" onclick="exportExcel()">📊 Exportar Excel</button> <button class="btn btn-danger" onclick="exportPDF()"> Exportar PDF</button></div><div class="card"><h3 class="card-title">Prévia</h3><div id="relPrev"></div></div>';
+  c.innerHTML = '<div class="card"><h3 class="card-title">Filtros do Relatório</h3><div class="filters"><input type="date" id="rIni"><input type="date" id="rFim"><input type="text" id="rCli" placeholder="Cliente"><input type="text" id="rPed" placeholder="Nº Pedido"><input type="text" id="rEnt" placeholder="Entregador"><input type="text" id="rSep" placeholder="Separador"></div><button class="btn" onclick="exportExcel()">📊 Exportar Excel</button> <button class="btn btn-danger" onclick="exportPDF()">📄 Exportar PDF</button></div><div class="card"><h3 class="card-title">Prévia</h3><div id="relPrev"></div></div>';
   updateRelPrev();
   ['rIni','rFim','rCli','rPed','rEnt','rSep'].forEach(function(id) { var el = document.getElementById(id); if (el) { el.addEventListener('input', updateRelPrev); el.addEventListener('change', updateRelPrev); } });
 }
+
 function getRelData() {
   var ini = document.getElementById('rIni') ? document.getElementById('rIni').value : '';
   var fim = document.getElementById('rFim') ? document.getElementById('rFim').value : '';
@@ -701,6 +771,7 @@ function getRelData() {
   if (sep) lista = lista.filter(function(p) { return (p.separador || '').toLowerCase().indexOf(sep) >= 0; });
   return lista;
 }
+
 function updateRelPrev() {
   var lista = getRelData();
   var html = '<div class="table-wrap"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Separador</th><th>Entregador</th><th>Status</th><th>Data</th></tr></thead><tbody>' +
@@ -708,11 +779,13 @@ function updateRelPrev() {
     '</tbody></table></div><p style="margin-top:10px; color:var(--text-soft); font-size:13px;">' + lista.length + ' registro(s)</p>';
   document.getElementById('relPrev').innerHTML = html;
 }
+
 function exportExcel() {
   var lista = getRelData(); if (!lista.length) { toast('Nenhum dado para exportar', 'warning'); return; }
   var data = lista.map(function(p) { return { 'Pedido': p.numero, 'Cód. Cliente': p.codigoCliente || '', 'Cliente': p.cliente, 'Endereço': p.endereco || '', 'Separador': p.separador || '', 'Data Separação': formatDT(p.dataSeparacao), 'Entregador': p.entregador || '', 'Data Retirada': formatDT(p.dataRetirada), 'Data Entrega': formatDT(p.dataEntrega), 'Status': p.status, 'Problema': p.motivoProblema || '' }; });
   var ws = XLSX.utils.json_to_sheet(data); var wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Relatório'); XLSX.writeFile(wb, 'relatorio_' + new Date().toISOString().split('T')[0] + '.xlsx'); toast('Excel exportado', 'success');
 }
+
 function exportPDF() {
   var lista = getRelData(); if (!lista.length) { toast('Nenhum dado', 'warning'); return; }
   var doc = new window.jspdf.jsPDF(); doc.setFontSize(16); doc.text('Relatório de Pedidos', 14, 15); doc.setFontSize(10); doc.text('Gerado em: ' + new Date().toLocaleString('pt-BR'), 14, 22);
@@ -720,7 +793,6 @@ function exportPDF() {
   doc.save('relatorio_' + new Date().toISOString().split('T')[0] + '.pdf'); toast('PDF exportado', 'success');
 }
 
-/* ============ BUSCA CEP (ViaCEP) ============ */
 async function buscarCep() {
   var cepInput = document.getElementById('clienteCep');
   if (!cepInput) return;
@@ -770,19 +842,16 @@ function formatarCep(input) {
   if (v.replace(/\D/g, '').length === 8) { buscarCep(); }
 }
 
-/* ============ BUSCA INTELIGENTE DE CLIENTE ============ */
 function buscarClientePorCodigo(codigo) {
   if (!codigo) return null;
   
   var codigoNorm = codigo.toString().trim().toUpperCase().replace(/[^0-9]/g, '');
   
-  // Busca exata
   var cliente = db.clientes.find(function(c) { 
     return c.codigo.toString().trim().toUpperCase().replace(/[^0-9]/g, '') === codigoNorm; 
   });
   if (cliente) return cliente;
   
-  // Busca aproximada
   var clientesPossiveis = db.clientes.filter(function(c) {
     var codCliente = c.codigo.toString().trim().toUpperCase().replace(/[^0-9]/g, '');
     return codCliente.indexOf(codigoNorm) >= 0 || codigoNorm.indexOf(codCliente) >= 0;
@@ -794,7 +863,6 @@ function buscarClientePorCodigo(codigo) {
   return null;
 }
 
-/* ============ CADASTRO DE CLIENTE - CORRIGIDO ============ */
 function cadastrarClienteEPedido() {
   if (isProcessing) return;
   isProcessing = true;
@@ -811,8 +879,6 @@ function cadastrarClienteEPedido() {
   var cidade = document.getElementById('clienteCidade') ? document.getElementById('clienteCidade').value.trim() : '';
   var cnpj = document.getElementById('clienteCnpj') ? document.getElementById('clienteCnpj').value.trim() : '';
   var telefone = document.getElementById('clienteTelefone') ? document.getElementById('clienteTelefone').value.trim() : '';
-  
-  console.log('Dados:', { numero, codigo, apelido, nome, rua, numeroEnd, bairro, cidade });
   
   var camposObrigatorios = [
     { id: 'ocrNum', valor: numero, nome: 'Número do Pedido' },
@@ -870,7 +936,6 @@ function cadastrarClienteEPedido() {
     clienteExistente.endereco = enderecoCompleto;
     if (cnpj) clienteExistente.cnpj = cnpj;
     if (telefone) clienteExistente.telefone = telefone;
-    console.log('Cliente atualizado:', clienteExistente);
     toast('Dados do cliente atualizados!', 'success');
   } else {
     var novoCliente = {
@@ -891,12 +956,10 @@ function cadastrarClienteEPedido() {
       longitude: null
     };
     db.clientes.push(novoCliente);
-    console.log('Novo cliente cadastrado:', novoCliente);
     toast('Cliente cadastrado!', 'success');
   }
   
   saveDB();
-  console.log('DB após salvar - clientes:', db.clientes.length);
   
   var pedido = {
     id: Date.now(),
@@ -912,11 +975,9 @@ function cadastrarClienteEPedido() {
   };
   db.pedidos.push(pedido);
   saveDB();
-  console.log('Pedido criado:', pedido);
   
   toast('Pedido separado com sucesso!', 'success');
   
-  // FECHAR MODAL CORRETAMENTE
   stopCamera();
   document.getElementById('modalContainer').innerHTML = '';
   isProcessing = false;
@@ -925,7 +986,6 @@ function cadastrarClienteEPedido() {
 }
 
 function confirmarPedidoCadastrado(modo, foto) {
-  // Resetar flag de processamento para evitar travamento
   isProcessing = false;
   
   var numeroEl = document.getElementById('ocrNum');
@@ -934,14 +994,11 @@ function confirmarPedidoCadastrado(modo, foto) {
   var numero = numeroEl ? numeroEl.value.trim() : '';
   var codigo = codigoEl ? codigoEl.value.trim() : '';
   
-  console.log('confirmarPedidoCadastrado chamado - numero:', numero, 'codigo:', codigo);
-  
   if (!numero) { 
     alert('Informe o número do pedido'); 
     return; 
   }
   
-  // Buscar cliente pelo código (se tiver)
   var cliente = null;
   if (codigo) {
     var codigoNorm = codigo.toString().trim().toUpperCase().replace(/[^0-9]/g, '');
@@ -963,14 +1020,11 @@ function confirmarPedidoCadastrado(modo, foto) {
     fotoSeparacao: foto
   };
   
-  console.log('Criando pedido:', pedido);
-  
   db.pedidos.push(pedido);
   saveDB();
   
   toast('Pedido separado com sucesso!', 'success');
   
-  // Fechar modal
   stopCamera();
   document.getElementById('modalContainer').innerHTML = '';
   isProcessing = false;
@@ -978,7 +1032,6 @@ function confirmarPedidoCadastrado(modo, foto) {
   renderSeparacao();
 }
 
-/* ============ CÂMERA ============ */
 async function openCamera(modo) {
   if (isProcessing) return;
   if (typeof Tesseract === 'undefined') {
@@ -988,7 +1041,7 @@ async function openCamera(modo) {
   currentCameraModo = modo;
   var isMobile = window.innerWidth <= 768;
   var overlayClass = isMobile ? 'modal-overlay camera-modal' : 'modal-overlay';
-  document.getElementById('modalContainer').innerHTML = '<div class="' + overlayClass + '" onclick="if(event.target===this)closeCamera()"><div class="modal"><h2>📷 ' + (modo === 'separacao' ? 'Fotografar Pedido' : 'Receber Pedido') + '</h2><div class="camera-wrapper"><div class="camera-container" id="camContainer"><div class="camera-hint">👆 Toque para fotografar</div><div class="camera-focus-ring" id="focusRing"></div><video id="camVideo" autoplay playsinline muted></video></div><div class="camera-controls"><button class="btn-capture" id="btnCapture" onclick="doCapture()">📷</button><button class="btn-cancel-cam" onclick="closeCamera()"> Cancelar</button></div><div id="ocrProgress" style="display:none;"><div class="ocr-progress"><div class="ocr-progress-bar" id="ocrBar" style="width:0%"></div></div></div><p id="ocrStatus" class="ocr-status" style="display:none;"></p></div></div></div>';
+  document.getElementById('modalContainer').innerHTML = '<div class="' + overlayClass + '" onclick="if(event.target===this)closeCamera()"><div class="modal"><h2>📷 ' + (modo === 'separacao' ? 'Fotografar Pedido' : 'Receber Pedido') + '</h2><div class="camera-wrapper"><div class="camera-container" id="camContainer"><div class="camera-hint">👆 Toque para fotografar</div><div class="camera-focus-ring" id="focusRing"></div><video id="camVideo" autoplay playsinline muted></video></div><div class="camera-controls"><button class="btn-capture" id="btnCapture" onclick="doCapture()">📷</button><button class="btn-cancel-cam" onclick="closeCamera()">✕ Cancelar</button></div><div id="ocrProgress" style="display:none;"><div class="ocr-progress"><div class="ocr-progress-bar" id="ocrBar" style="width:0%"></div></div></div><p id="ocrStatus" class="ocr-status" style="display:none;"></p></div></div></div>';
   try {
     var stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280, max: 1920 }, height: { ideal: 720, max: 1080 } }, audio: false });
     cameraStream = stream;
@@ -1000,6 +1053,7 @@ async function openCamera(modo) {
     catch (e2) { toast('Erro ao acessar câmera: ' + e2.message, 'error'); closeModal(); }
   }
 }
+
 function showFocusRing(e) { var ring = document.getElementById('focusRing'); if (!ring) return; var rect = e.currentTarget.getBoundingClientRect(); ring.style.left = (e.clientX - rect.left - 30) + 'px'; ring.style.top = (e.clientY - rect.top - 30) + 'px'; ring.classList.remove('active'); void ring.offsetWidth; ring.classList.add('active'); }
 function doCapture() { if (!cameraStream || isProcessing) return; capturePhoto(currentCameraModo); }
 function stopCamera() { if (cameraStream) { cameraStream.getTracks().forEach(function(t) { t.stop(); }); cameraStream = null; } }
@@ -1038,7 +1092,6 @@ async function capturePhoto(modo) {
     } catch (e) {}
     
     var dados = parseOCR(ocrResult.data.text);
-    console.log('OCR dados:', dados);
     
     if (barcodeResult && barcodeResult.text) {
       var bn = barcodeResult.text.replace(/[^0-9]/g, '').slice(-8);
@@ -1053,7 +1106,6 @@ async function capturePhoto(modo) {
     modoAtual = modo;
     
     var resultadoBusca = buscarClientePorCodigo(dados.codigo);
-    console.log('Busca cliente:', resultadoBusca);
     
     if (Array.isArray(resultadoBusca)) {
       var listaHtml = resultadoBusca.map(function(c, idx) {
@@ -1065,14 +1117,14 @@ async function capturePhoto(modo) {
       var endCompleto = resultadoBusca.rua + ', ' + resultadoBusca.numero + ' - ' + resultadoBusca.bairro + ', ' + resultadoBusca.cidade;
       if (resultadoBusca.cep) endCompleto += ' (CEP: ' + resultadoBusca.cep + ')';
       
-      showModal('<h2>✅ Cliente Conhecido</h2><img src="' + foto + '" style="width:100%; max-height:150px; object-fit:contain; border-radius:8px; margin-bottom:15px;"><p style="margin-bottom:15px; color:var(--success); font-weight:700;">Cliente: <b>' + resultadoBusca.apelido + '</b></p><div class="form-group"><label>Número do Pedido</label><input id="ocrNum" value="' + dados.numero + '"></div><div class="form-group"><label>Código do Cliente</label><input value="' + dados.codigo + '" readonly></div><div class="form-group"><label>Cliente</label><input value="' + resultadoBusca.apelido + '" readonly></div><div class="form-group"><label>Endereço</label><textarea rows="2" readonly>' + endCompleto + '</textarea></div><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-success" onclick="confirmarPedidoCadastrado(\'' + modo + '\', \'' + foto.replace(/'/g, "\\'") + '\')">✓ Confirmar</button></div>');
+      showModal('<h2>✅ Cliente Conhecido</h2><img src="' + foto + '" style="width:100%; max-height:150px; object-fit:contain; border-radius:8px; margin-bottom:15px;"><p style="margin-bottom:15px; color:var(--success); font-weight:700;">Cliente: <b>' + resultadoBusca.apelido + '</b></p><div class="form-group"><label>Número do Pedido</label><input id="ocrNum" value="' + dados.numero + '"></div><div class="form-group"><label>Código do Cliente</label><input id="ocrCod" value="' + dados.codigo + '" readonly></div><div class="form-group"><label>Cliente</label><input value="' + resultadoBusca.apelido + '" readonly></div><div class="form-group"><label>Endereço</label><textarea rows="2" readonly>' + endCompleto + '</textarea></div><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-success" onclick="confirmarPedidoCadastrado(\'' + modo + '\', \'' + foto.replace(/'/g, "\\'") + '\')">✓ Confirmar</button></div>');
     } else {
       showModal('<h2>📋 Novo Cliente</h2><p style="margin-bottom:15px; color:var(--warning); font-weight:700;">Primeiro pedido para este cliente. Complete o cadastro:</p>' +
         '<div class="form-group"><label>Nº do Pedido <span class="required">*</span></label><input id="ocrNum" value="' + dados.numero + '"></div>' +
-        '<div class="form-group"><label>Código do Cliente</label><input id="ocrCod" value="' + dados.codigo + '" readonly></div>'
+        '<div class="form-group"><label>Código do Cliente <span class="required">*</span></label><input id="ocrCod" value="' + dados.codigo + '"></div>' +
         '<div class="form-group"><label>Apelido <span class="required">*</span> <small style="color:var(--text-soft); font-weight:600;">(nome resumido)</small></label><input id="clienteApelido" placeholder="Ex: Munhoz"></div>' +
         '<div class="form-group"><label>Nome Completo <small style="color:var(--text-soft); font-weight:600;">(opcional)</small></label><input id="clienteNome" placeholder="Razão social"></div>' +
-        '<div class="endereco-section"><h4> Endereço</h4>' +
+        '<div class="endereco-section"><h4>📍 Endereço</h4>' +
           '<div class="form-group"><label>CEP</label><div class="cep-group"><input id="clienteCep" placeholder="00000-000" maxlength="9" oninput="formatarCep(this)"><button class="btn btn-sm" onclick="buscarCep()">🔍</button></div><div id="cepStatus" class="cep-status"></div></div>' +
           '<div class="form-group"><label>Rua <span class="required">*</span></label><input id="clienteRua" placeholder="Preenchido pelo CEP"></div>' +
           '<div class="endereco-row"><div class="form-group"><label>Número <span class="required">*</span></label><input id="clienteNumero" placeholder="Nº"></div><div class="form-group"><label>Complemento</label><input id="clienteComplemento" placeholder="Sala, Apto..."></div></div>' +
@@ -1151,6 +1203,7 @@ async function scanBarcodeOnly(fotoOriginal, dadosOCR, modo) {
     }, 1000);
   }).catch(function(e) { toast('Erro câmera: ' + e.message, 'error'); });
 }
+
 function closeBarcodeScanner() { var v = document.getElementById('barcodeVideo'); if (v && v.srcObject) v.srcObject.getTracks().forEach(function(t) { t.stop(); }); closeModal(); }
 
 function entradaManual(modo) {
@@ -1158,22 +1211,18 @@ function entradaManual(modo) {
   showModal('<h2>Inserir Manualmente</h2><div class="form-group"><label>Nº do Pedido <span class="required">*</span></label><input id="ocrNum"></div><div class="form-group"><label>Código <span class="required">*</span></label><input id="ocrCod"></div><div class="form-group"><label>Apelido <span class="required">*</span></label><input id="clienteApelido"></div><div class="form-group"><label>Nome Completo</label><input id="clienteNome"></div><div class="endereco-section"><h4>📍 Endereço</h4><div class="form-group"><label>CEP</label><div class="cep-group"><input id="clienteCep" maxlength="9" oninput="formatarCep(this)"><button class="btn btn-sm" onclick="buscarCep()">🔍</button></div><div id="cepStatus" class="cep-status"></div></div><div class="form-group"><label>Rua <span class="required">*</span></label><input id="clienteRua"></div><div class="endereco-row"><div class="form-group"><label>Número <span class="required">*</span></label><input id="clienteNumero"></div><div class="form-group"><label>Complemento</label><input id="clienteComplemento"></div></div><div class="form-group"><label>Bairro <span class="required">*</span></label><input id="clienteBairro"></div><div class="form-group"><label>Cidade - UF <span class="required">*</span></label><input id="clienteCidade"></div></div><div class="form-group"><label>CNPJ</label><input id="clienteCnpj"></div><div class="form-group"><label>Telefone</label><input id="clienteTelefone"></div><p style="font-size:12px; color:var(--text-soft); margin-bottom:15px;"><span class="required">*</span> = obrigatórios</p><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-success" onclick="cadastrarClienteEPedido()">✓ Confirmar</button></div>');
 }
 
-/* ============ PARSER OCR - COMPLETO ============ */
 function parseOCR(text) {
   var linhas = text.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
   var t = text.toUpperCase();
   var numero = '', data = '', codigo = '', cliente = '', endereco = '';
   
-  // 1. NÚMERO DO PEDIDO
   var mPedido = t.match(/(?:ABERIO|ABERTO|ABERT0|PEDIDO)\s*[-–]?\s*N[O0º°]?\s*([0-9]+)/);
   if (mPedido) { numero = mPedido[1].replace(/[^0-9]/g, ''); if (numero.length > 8) numero = numero.slice(-8); }
   if (!numero) { var mNum = t.match(/N[O0º°]\s*([0-9]{6,})/); if (mNum) { numero = mNum[1].replace(/[^0-9]/g, ''); if (numero.length > 8) numero = numero.slice(-8); } }
   
-  // 2. DATA
   var mData = t.match(/(\d{2}\/\d{2}\/\d{4})/);
   if (mData) data = mData[1];
   
-  // 3. CÓDIGO E CLIENTE
   var idxCupom = t.indexOf('CUPOM SEM VALOR FISCAL'); if (idxCupom < 0) idxCupom = t.indexOf('GUPOM');
   if (idxCupom >= 0) { 
     var textoApos = text.substring(idxCupom);
@@ -1202,7 +1251,6 @@ function parseOCR(text) {
     }
   }
   
-  // 4. ENDEREÇO
   var mEnd = t.match(/(?:AVENTIDA|AVENIDA|AVENI0A|AV\s|RUA|ALAMEDA|ESTRADA|TRAVESSA)\s+[A-Z0-9\s,]+?\d{3,}/);
   if (mEnd) {
     endereco = mEnd[0].trim().replace(/[|&]/g, '').trim();
@@ -1229,24 +1277,32 @@ function parseOCR(text) {
   return { numero: numero, data: data, codigo: codigo, cliente: cliente, endereco: endereco };
 }
 
-/* ============ MODAL ============ */
 function showModal(html) { 
   document.getElementById('modalContainer').innerHTML = '<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal">' + html + '</div></div>'; 
 }
+
 function closeModal() { 
   stopCamera(); 
   document.getElementById('modalContainer').innerHTML = ''; 
   isProcessing = false; 
 }
 
-/* ============ UTILS ============ */
 function formatDT(iso) { if (!iso) return '-'; var d = new Date(iso); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
 
-/* ============ INIT ============ */
 function initApp() { currentView = 'dashboard'; buildNav(); renderView(); }
-loadTheme(); loadDB();
+
+// Inicialização
+loadTheme(); 
+loadDB();
 var savedUser = sessionStorage.getItem('currentUser');
-if (savedUser) { try { currentUser = JSON.parse(savedUser); document.getElementById('loginScreen').classList.add('hidden'); document.getElementById('appScreen').classList.remove('hidden'); initApp(); } catch(e) {} }
+if (savedUser) { 
+  try { 
+    currentUser = JSON.parse(savedUser); 
+    document.getElementById('loginScreen').classList.add('hidden'); 
+    document.getElementById('appScreen').classList.remove('hidden'); 
+    initApp(); 
+  } catch(e) {} 
+}
 </script>
 </body>
 </html>
