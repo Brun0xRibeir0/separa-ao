@@ -493,9 +493,15 @@ function confirmarRetiradaPedidos() {
     }
   });
   saveDB(); 
-  toast(count + ' pedido(s) retirado(s) com sucesso', 'success'); 
-  // Navegar para roteirização
-  navigate('roteirizacao');
+  toast(count + ' pedido(s) retirado(s) com sucesso', 'success');
+  
+  // Aguardar o toast aparecer e depois navegar
+  setTimeout(function() {
+    currentView = 'roteirizacao';
+    buildNav();
+    renderView();
+    if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
+  }, 500);
 }
 function renderListaEntregas() {
   var lista = db.pedidos.filter(function(p) { return p.status === 'EM_ENTREGA' && p.entregadorId === currentUser.id; });
