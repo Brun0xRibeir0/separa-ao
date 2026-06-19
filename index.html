@@ -45,6 +45,7 @@ html, body {
   font-size: 16px;
   min-height: 100vh;
   transition: background 0.3s, color 0.3s;
+  overflow-x: hidden;
 }
 button, input, select, textarea {
   font-family: inherit;
@@ -223,6 +224,7 @@ button, input, select, textarea {
   margin-left: 260px;
   padding: 20px;
   transition: margin 0.3s;
+  width: 100%;
 }
 .topbar {
   display: flex;
@@ -259,7 +261,7 @@ button, input, select, textarea {
   color: var(--primary);
 }
 
-/* DASHBOARD - PRIORIDADE PARA TABELA */
+/* DASHBOARD */
 .dashboard-grid {
   display: grid;
   grid-template-columns: 1fr 350px;
@@ -327,12 +329,14 @@ button, input, select, textarea {
 .table-wrap { 
   overflow-x: auto; 
   -webkit-overflow-scrolling: touch;
+  width: 100%;
 }
 table {
   width: 100%;
   border-collapse: collapse;
   background: var(--surface);
   font-size: 14px;
+  min-width: 600px;
 }
 th, td {
   padding: 12px 10px;
@@ -420,7 +424,7 @@ tr:hover { background: var(--surface-2); }
 .camera-container {
   position: relative;
   width: 100%;
-  max-width: 500px;
+  max-width: 600px;
   margin: 0 auto;
   background: #000;
   border-radius: var(--radius);
@@ -429,6 +433,7 @@ tr:hover { background: var(--surface-2); }
 .camera-container video, .camera-container img, .camera-container canvas {
   width: 100%;
   display: block;
+  object-fit: contain;
 }
 .camera-actions {
   display: flex;
@@ -490,7 +495,7 @@ tr:hover { background: var(--surface-2); }
   border-radius: 8px;
 }
 
-/* RESPONSIVE - MOBILE */
+/* RESPONSIVE - TABLET E MOBILE */
 @media (max-width: 968px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
@@ -506,7 +511,7 @@ tr:hover { background: var(--surface-2); }
     width: 260px;
   }
   .sidebar.open { transform: translateX(0); }
-  .main { margin-left: 0; padding: 12px; }
+  .main { margin-left: 0; padding: 12px; width: 100%; }
   .menu-toggle { display: block; }
   .topbar { padding: 12px 15px; margin-bottom: 15px; }
   .topbar h1 { font-size: 17px; }
@@ -527,9 +532,13 @@ tr:hover { background: var(--surface-2); }
     gap: 8px;
   }
   
+  table {
+    font-size: 13px;
+    min-width: 500px;
+  }
   th, td { 
     padding: 10px 8px; 
-    font-size: 13px; 
+    font-size: 12px; 
   }
   
   .btn { 
@@ -541,6 +550,16 @@ tr:hover { background: var(--surface-2); }
   
   .modal { padding: 18px; }
   .modal h2 { font-size: 18px; }
+  
+  .checkbox-item {
+    padding: 10px;
+  }
+  .checkbox-item .pedido-num {
+    font-size: 14px;
+  }
+  .checkbox-item .pedido-cli {
+    font-size: 12px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -554,22 +573,13 @@ tr:hover { background: var(--surface-2); }
   .stat-card { padding: 12px 10px; }
   .stat-card .value { font-size: 22px; }
   
-  .table-wrap {
-    font-size: 12px;
+  table {
+    font-size: 11px;
+    min-width: 450px;
   }
   th, td {
     padding: 8px 6px;
-    font-size: 12px;
-  }
-  
-  .checkbox-item {
-    padding: 10px;
-  }
-  .checkbox-item .pedido-num {
-    font-size: 14px;
-  }
-  .checkbox-item .pedido-cli {
-    font-size: 12px;
+    font-size: 11px;
   }
   
   .camera-actions {
@@ -577,6 +587,29 @@ tr:hover { background: var(--surface-2); }
   }
   .camera-actions .btn {
     width: 100%;
+  }
+  
+  .form-group input, .form-group select, .form-group textarea {
+    font-size: 14px;
+    padding: 10px 12px;
+  }
+}
+
+/* LANDSCAPE MOBILE */
+@media (max-width: 896px) and (orientation: landscape) {
+  .modal {
+    max-height: 95vh;
+    padding: 15px;
+  }
+  .camera-container {
+    max-height: 60vh;
+  }
+  .main {
+    padding: 10px;
+  }
+  .card {
+    padding: 12px;
+    margin-bottom: 12px;
   }
 }
 </style>
@@ -631,7 +664,7 @@ tr:hover { background: var(--surface-2); }
 
 <script>
 /* ============ ESTADO ============ */
-const DB_KEY = 'sep_entrega_db_v4';
+const DB_KEY = 'sep_entrega_db_v5';
 let db = {
   users: [
     { id: 1, login: 'admin', pass: 'admin', nome: 'Administrador', funcao: 'admin', ativo: true },
@@ -762,7 +795,7 @@ function renderView() {
   if (fn[currentView]) fn[currentView]();
 }
 
-/* ============ DASHBOARD - PRIORIDADE TABELA ============ */
+/* ============ DASHBOARD ============ */
 function renderDashboard() {
   var hoje = new Date().toDateString();
   var sepHoje = db.pedidos.filter(function(p) { return new Date(p.dataSeparacao).toDateString() === hoje; }).length;
@@ -872,7 +905,7 @@ function renderSepList() {
   document.getElementById('sepList').innerHTML = html;
 }
 
-/* ============ ENTREGAS - SELEÇÃO DE PEDIDOS ============ */
+/* ============ ENTREGAS ============ */
 function renderEntregas() {
   var c = document.getElementById('content');
   var podeEditar = (currentUser.funcao === 'admin' || currentUser.funcao === 'entregador');
@@ -1262,7 +1295,7 @@ function exportPDF() {
   toast('PDF exportado', 'success');
 }
 
-/* ============ CÂMERA / OCR ============ */
+/* ============ CÂMERA / OCR APRIMORADO ============ */
 async function openCamera(modo) {
   if (typeof Tesseract === 'undefined') {
     showModal(
@@ -1276,6 +1309,7 @@ async function openCamera(modo) {
   
   showModal(
     '<h2>' + (modo === 'separacao' ? 'Fotografar Pedido' : 'Receber Pedido') + '</h2>' +
+    '<p style="margin-bottom:10px; font-size:13px; color:var(--text-soft);">💡 Dica: Segure o celular na vertical (em pé) para melhor precisão</p>' +
     '<div class="camera-container" id="camBox">' +
       '<video id="camVideo" autoplay playsinline></video>' +
     '</div>' +
@@ -1288,11 +1322,22 @@ async function openCamera(modo) {
   );
   try {
     var stream = await navigator.mediaDevices.getUserMedia({ 
-      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }, 
+      video: { 
+        facingMode: 'environment',
+        width: { ideal: 1920 },
+        height: { ideal: 1080 }
+      }, 
       audio: false 
     });
     cameraStream = stream;
-    document.getElementById('camVideo').srcObject = stream;
+    var video = document.getElementById('camVideo');
+    video.srcObject = stream;
+    
+    // Ajustar orientação
+    video.addEventListener('loadedmetadata', function() {
+      video.setAttribute('width', video.videoWidth);
+      video.setAttribute('height', video.videoHeight);
+    });
   } catch (e) {
     toast('Erro ao acessar câmera: ' + e.message, 'error');
     closeModal();
@@ -1313,14 +1358,24 @@ async function capturePhoto(modo) {
   var canvas = document.createElement('canvas');
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
-  canvas.getContext('2d').drawImage(video, 0, 0);
-  var foto = canvas.toDataURL('image/jpeg', 0.85);
+  var ctx = canvas.getContext('2d');
+  
+  // Rotacionar se necessário (landscape)
+  if (video.videoWidth > video.videoHeight) {
+    canvas.width = video.videoHeight;
+    canvas.height = video.videoWidth;
+    ctx.translate(canvas.width, 0);
+    ctx.rotate(90 * Math.PI / 180);
+  }
+  
+  ctx.drawImage(video, 0, 0);
+  var foto = canvas.toDataURL('image/jpeg', 0.9);
   stopCamera();
   
   var progressDiv = document.getElementById('ocrProgress');
   var statusEl = document.getElementById('ocrStatus');
   progressDiv.innerHTML = '<div class="ocr-progress"><div class="ocr-progress-bar" id="ocrBar" style="width:0%"></div></div>';
-  statusEl.textContent = 'Iniciando OCR...';
+  statusEl.textContent = 'Processando imagem...';
   
   try {
     var result = await Tesseract.recognize(foto, 'por', {
@@ -1329,26 +1384,29 @@ async function capturePhoto(modo) {
           var pct = Math.round(m.progress * 100);
           var bar = document.getElementById('ocrBar');
           if (bar) bar.style.width = pct + '%';
-          statusEl.textContent = 'Processando OCR... ' + pct + '%';
+          statusEl.textContent = 'Lendo texto... ' + pct + '%';
         }
+      },
+      errorHandler: function(err) {
+        console.error('OCR Error:', err);
       }
     });
     
     var text = result.data.text;
-    console.log('OCR Result:', text);
+    console.log('OCR Texto:', text);
     
     var dados = parseOCR(text);
     statusEl.textContent = 'OCR concluído!';
     
     showModal(
       '<h2>Confirmar Dados do Pedido</h2>' +
-      '<img src="' + foto + '" style="width:100%; max-height:200px; object-fit:cover; border-radius:8px; margin-bottom:15px;">' +
+      '<img src="' + foto + '" style="width:100%; max-height:200px; object-fit:contain; border-radius:8px; margin-bottom:15px;">' +
       '<div class="form-group"><label>Número do Pedido</label><input id="ocrNum" value="' + dados.numero + '"></div>' +
       '<div class="form-group"><label>Data do Pedido</label><input id="ocrData" value="' + dados.data + '"></div>' +
       '<div class="form-group"><label>Código do Cliente</label><input id="ocrCod" value="' + dados.codigo + '"></div>' +
       '<div class="form-group"><label>Nome do Cliente</label><input id="ocrCli" value="' + dados.cliente + '"></div>' +
       '<div class="form-group"><label>Endereço</label><textarea id="ocrEnd" rows="3">' + dados.endereco + '</textarea></div>' +
-      '<details style="margin-top:10px;"><summary style="cursor:pointer; font-weight:800;">Ver texto OCR completo</summary><pre style="background:var(--surface-2); padding:10px; border-radius:8px; font-size:12px; overflow-x:auto; white-space:pre-wrap; margin-top:5px;">' + text.replace(/</g, '&lt;') + '</pre></details>' +
+      '<details style="margin-top:10px;"><summary style="cursor:pointer; font-weight:800; font-size:13px;"> Ver texto OCR completo</summary><pre style="background:var(--surface-2); padding:10px; border-radius:8px; font-size:11px; overflow-x:auto; white-space:pre-wrap; margin-top:5px; max-height:200px; overflow-y:auto;">' + text.replace(/</g, '&lt;') + '</pre></details>' +
       '<div class="modal-actions">' +
         '<button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>' +
         '<button class="btn btn-success" onclick="confirmarPedido(\'' + modo + '\', \'' + foto.replace(/'/g, "\\'") + '\')">✓ Confirmar</button>' +
@@ -1406,40 +1464,76 @@ function confirmarManual(modo) {
   }
 }
 
-/* ============ PARSER OCR ============ */
+/* ============ PARSER OCR - VERSÃO APRIMORADA ============ */
 function parseOCR(text) {
   var linhas = text.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
   var t = text.toUpperCase();
   var numero = '', data = '', codigo = '', cliente = '', endereco = '';
   
-  var mPedido = t.match(/(?:ABERIO|ABERTO|ABERT0|PEDIDO)\s*[-–]?\s*N[O0º°]?\s*([0-9]{6,})/);
-  if (mPedido) {
-    numero = mPedido[1].slice(-8);
+  // 1. NÚMERO DO PEDIDO - Priorizar padrões específicos
+  // Padrão 1: "ABERTO - No 0000164381"
+  var mPedido1 = t.match(/(?:ABERIO|ABERTO|ABERT0)\s*[-–]?\s*N[O0º°]?\s*([0-9]{6,})/);
+  if (mPedido1) {
+    numero = mPedido1[1];
   }
+  
+  // Padrão 2: "PEDIDO" seguido de número na próxima linha
   if (!numero) {
-    var mFallback = t.match(/N[O0º°]\s*([0-9]{6,})/);
-    if (mFallback) numero = mFallback[1].slice(-8);
-  }
-  
-  var mData = t.match(/(\d{2}\/\d{2}\/\d{4})/);
-  if (mData) data = mData[1];
-  
-  for (var i = 0; i < linhas.length; i++) {
-    var linha = linhas[i].toUpperCase();
-    var mCliente = linha.match(/^(\d{2,5})\s*[-–—]\s*(.+)/);
-    if (mCliente) {
-      codigo = mCliente[1];
-      cliente = mCliente[2].trim();
-      cliente = cliente.replace(/\s*(?:LTDA|LIDA|ME|EPP)\s*$/i, '').trim();
-      break;
+    var idxPedido = t.indexOf('PEDIDO');
+    if (idxPedido >= 0) {
+      var resto = t.substring(idxPedido);
+      var mPedido2 = resto.match(/N[O0º°]?\s*([0-9]{6,})/);
+      if (mPedido2) numero = mPedido2[1];
     }
   }
   
-  var mEndereco = t.match(/(?:AVENTIDA|AVENIDA|AVENI0A|AV\s|RUA)\s+([A-Z0-9\s,]+(?:\d{3,}))/);
+  // Validar: deve conter apenas dígitos
+  if (numero) {
+    numero = numero.replace(/[^0-9]/g, '');
+    // Pegar últimos 8 dígitos
+    if (numero.length > 8) {
+      numero = numero.slice(-8);
+    }
+  }
+  
+  // 2. DATA - Formato DD/MM/AAAA
+  var mData = t.match(/(\d{2}\/\d{2}\/\d{4})/);
+  if (mData) data = mData[1];
+  
+  // 3. CLIENTE - Após "CUPOM SEM VALOR FISCAL"
+  var idxCupom = t.indexOf('CUPOM SEM VALOR FISCAL');
+  if (idxCupom < 0) idxCupom = t.indexOf('GUPOM SEM VALOR FISCAL');
+  
+  if (idxCupom >= 0) {
+    var textoApos = text.substring(idxCupom);
+    var linhasApos = textoApos.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0 && l.length < 100; });
+    
+    // Primeira linha após cupom deve ter: CÓDIGO - NOME
+    for (var i = 0; i < linhasApos.length; i++) {
+      var linha = linhasApos[i];
+      // Padrão: "583 - MUNHOZ ACESSORIOS..."
+      var mCliente = linha.match(/^(\d{2,5})\s*[-–—]\s*(.+)/);
+      if (mCliente) {
+        codigo = mCliente[1];
+        cliente = mCliente[2].trim();
+        // Remover LTDA, ME, etc
+        cliente = cliente.replace(/\s*LTDA\.?\s*$/i, '')
+                        .replace(/\s*LIDA\.?\s*$/i, '')
+                        .replace(/\s*ME\s*$/i, '')
+                        .replace(/[|]/g, '')
+                        .trim();
+        break;
+      }
+    }
+  }
+  
+  // 4. ENDEREÇO - Procurar AVENIDA, RUA, etc
+  var mEndereco = t.match(/(?:AVENTIDA|AVENIDA|AVENI0A|AV\s|RUA|ALAMEDA|ESTRADA)\s+([A-Z0-9\s,]+(?:\d{3,}))/);
   if (mEndereco) {
     endereco = mEndereco[0].trim().replace(/[|]/g, '').trim();
   }
   
+  // 5. CIDADE/ESTADO
   var mCidade = t.match(/([A-ZÁÉÍÓÚÂÊÔÃÕÇ\s]{3,})\s*[-–]\s*([A-Z]{2})\s*[-–]?\s*\(?\d{2}\)?\s*[\d\-]{7,}/);
   if (mCidade && endereco) {
     var cidade = mCidade[1].trim();
@@ -1447,15 +1541,16 @@ function parseOCR(text) {
     endereco = endereco + ' / ' + cidade + ' - ' + estado;
   }
   
+  // 6. CEP
   var mCep = t.match(/CEP[:\s]*([0-9]{5}-?[0-9]{3})/);
   if (mCep && endereco) {
     endereco += ' / CEP: ' + mCep[1];
   }
   
-  if (cliente) {
-    cliente = cliente.replace(/\s*LTDA\.?\s*$/i, '').replace(/\s*LIDA\.?\s*$/i, '').replace(/\s*ME\s*$/i, '').replace(/[|]/g, '').trim();
-  }
+  // Limpeza final
   endereco = endereco.replace(/[|]/g, '').trim();
+  
+  console.log('Parseado:', { numero: numero, data: data, codigo: codigo, cliente: cliente, endereco: endereco });
   
   return { numero: numero, data: data, codigo: codigo, cliente: cliente, endereco: endereco };
 }
