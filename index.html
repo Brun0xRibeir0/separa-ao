@@ -87,6 +87,7 @@ button, input, select, textarea {
 .btn { display: inline-block; padding: 14px 20px; border: none; border-radius: 8px; background: var(--primary); color: #fff; font-weight: 800; cursor: pointer; text-align: center; transition: all 0.2s; font-size: 16px; min-height: 48px; text-decoration: none; }
 .btn:hover { background: var(--primary-dark); transform: translateY(-1px); }
 .btn:active { transform: translateY(0); }
+.btn:disabled { opacity: 0.6; cursor: not-allowed; }
 .btn-block { width: 100%; display: block; }
 .btn-success { background: var(--success); }
 .btn-success:hover { background: #15803d; }
@@ -196,6 +197,26 @@ tr:hover { background: var(--surface-2); }
 .toast.warning { border-left-color: var(--warning); }
 @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
+/* Loading overlay */
+.loading-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+}
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid var(--surface-2);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
 @media (max-width: 968px) { .dashboard-grid { grid-template-columns: 1fr; } .stats-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 768px) { .sidebar { transform: translateX(-100%); width: 260px; } .sidebar.open { transform: translateX(0); } .main { margin-left: 0; padding: 12px; width: 100%; } .menu-toggle { display: block; } .topbar { padding: 12px 15px; margin-bottom: 15px; } .topbar h1 { font-size: 17px; } .card { padding: 15px; margin-bottom: 15px; } .card-title { font-size: 16px; margin-bottom: 12px; } .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; } .stat-card { padding: 15px 12px; } .stat-card .value { font-size: 24px; } .stat-card .label { font-size: 11px; } .filters { grid-template-columns: 1fr; gap: 8px; } table { font-size: 13px; min-width: 500px; } th, td { padding: 10px 8px; font-size: 12px; } .btn { padding: 12px 16px; font-size: 15px; min-height: 44px; } .btn-sm { padding: 8px 12px; font-size: 13px; min-height: 38px; } .camera-container { height: 60vh; } .btn-capture { width: 64px; height: 64px; font-size: 28px; } .map-container { height: 300px; } }
 @media (max-width: 480px) { .login-box { padding: 25px 18px; } .login-box h1 { font-size: 20px; } .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; } .stat-card { padding: 12px 10px; } .stat-card .value { font-size: 22px; } table { font-size: 11px; min-width: 450px; } th, td { padding: 8px 6px; font-size: 11px; } .form-group input, .form-group select, .form-group textarea { font-size: 14px; padding: 10px 12px; } .camera-container { height: 65vh; border-radius: 8px; } .btn-capture { width: 60px; height: 60px; font-size: 26px; } .btn-cancel-cam { padding: 10px 16px; font-size: 13px; } .map-container { height: 250px; } }
@@ -208,7 +229,7 @@ tr:hover { background: var(--surface-2); }
 
 <div id="loginScreen" class="login-wrap">
   <div class="login-box">
-    <h1>📦 Separação & Entrega</h1>
+    <h1> Separação & Entrega</h1>
     <p class="sub">Sistema de Controle de Pedidos</p>
     <div class="form-group"><label>Usuário</label><input type="text" id="loginUser" placeholder="Digite seu usuário"></div>
     <div class="form-group"><label>Senha</label><input type="password" id="loginPass" placeholder="Digite sua senha"></div>
@@ -237,10 +258,11 @@ tr:hover { background: var(--surface-2); }
 
 <div id="modalContainer"></div>
 <div class="toast-container" id="toastContainer"></div>
+<div id="loadingOverlay" class="loading-overlay hidden"><div class="loading-spinner"></div></div>
 
 <script>
 /* ============ ESTADO ============ */
-const DB_KEY = 'sep_entrega_db_v12';
+const DB_KEY = 'sep_entrega_db_v13';
 let db = {
   users: [
     { id: 1, login: 'admin', pass: 'admin', nome: 'Administrador', funcao: 'admin', ativo: true },
@@ -266,6 +288,7 @@ let trackingInterval = null;
 let userMarker = null;
 let fotoAtual = null;
 let modoAtual = null;
+let isProcessing = false;
 
 function loadDB() {
   const saved = localStorage.getItem(DB_KEY);
@@ -274,6 +297,9 @@ function loadDB() {
   if (!db.users.find(u => u.login === 'admin')) { db.users.push({ id: 1, login: 'admin', pass: 'admin', nome: 'Administrador', funcao: 'admin', ativo: true }); saveDB(); }
 }
 function saveDB() { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
+
+function showLoading() { document.getElementById('loadingOverlay').classList.remove('hidden'); }
+function hideLoading() { document.getElementById('loadingOverlay').classList.add('hidden'); }
 
 function toast(msg, type = 'info') {
   const t = document.createElement('div');
@@ -327,8 +353,8 @@ function buildNav() {
     { id: 'roteirizacao', icon: '', label: 'Roteirização' }
   ];
   if (currentUser.funcao === 'admin') {
-    items.push({ id: 'funcionarios', icon: '👥', label: 'Funcionários' });
-    items.push({ id: 'usuarios', icon: '🔐', label: 'Usuários' });
+    items.push({ id: 'funcionarios', icon: '', label: 'Funcionários' });
+    items.push({ id: 'usuarios', icon: '', label: 'Usuários' });
     items.push({ id: 'relatorios', icon: '📄', label: 'Relatórios' });
   }
   items.forEach(function(it) {
@@ -602,7 +628,7 @@ function renderUsuarios() {
   if (currentUser.funcao !== 'admin') { navigate('dashboard'); return; }
   var c = document.getElementById('content');
   c.innerHTML = '<div class="card"><h3 class="card-title">Usuários do Sistema</h3><button class="btn" onclick="formUsuario()">+ Novo Usuário</button><div class="table-wrap" style="margin-top:15px;"><table><thead><tr><th>Login</th><th>Nome</th><th>Função</th><th>Status</th><th>Ações</th></tr></thead><tbody>' +
-    db.users.map(function(u) { return '<tr><td>' + u.login + '</td><td>' + u.nome + '</td><td>' + u.funcao + '</td><td><span class="badge ' + (u.ativo ? 'badge-entregue' : 'badge-problema') + '">' + (u.ativo ? 'ATIVO' : 'INATIVO') + '</span></td><td><button class="btn btn-sm" onclick="formUsuario(' + u.id + ')">✏</button>' + (u.id !== currentUser.id ? ' <button class="btn btn-sm btn-danger" onclick="delUsuario(' + u.id + ')">🗑</button>' : '') + '</td></tr>'; }).join('') +
+    db.users.map(function(u) { return '<tr><td>' + u.login + '</td><td>' + u.nome + '</td><td>' + u.funcao + '</td><td><span class="badge ' + (u.ativo ? 'badge-entregue' : 'badge-problema') + '">' + (u.ativo ? 'ATIVO' : 'INATIVO') + '</span></td><td><button class="btn btn-sm" onclick="formUsuario(' + u.id + ')">✏</button>' + (u.id !== currentUser.id ? ' <button class="btn btn-sm btn-danger" onclick="delUsuario(' + u.id + ')"></button>' : '') + '</td></tr>'; }).join('') +
     '</tbody></table></div></div>';
 }
 function formUsuario(id) {
@@ -710,8 +736,40 @@ function formatarCep(input) {
   if (v.replace(/\D/g, '').length === 8) { buscarCep(); }
 }
 
+/* ============ BUSCA INTELIGENTE DE CLIENTE ============ */
+function buscarClientePorCodigo(codigo) {
+  if (!codigo) return null;
+  
+  // Normalizar código (remover espaços, uppercase)
+  var codigoNorm = codigo.toString().trim().toUpperCase();
+  
+  // Busca exata primeiro
+  var cliente = db.clientes.find(function(c) { 
+    return c.codigo.toString().trim().toUpperCase() === codigoNorm; 
+  });
+  if (cliente) return cliente;
+  
+  // Busca aproximada (se o OCR leu errado)
+  var clientesPossiveis = db.clientes.filter(function(c) {
+    var codCliente = c.codigo.toString().trim().toUpperCase();
+    // Verificar se um contém o outro ou são muito similares
+    return codCliente.indexOf(codigoNorm) >= 0 || codigoNorm.indexOf(codCliente) >= 0;
+  });
+  
+  if (clientesPossiveis.length === 1) return clientesPossiveis[0];
+  if (clientesPossiveis.length > 1) {
+    // Mostrar lista para o usuário escolher
+    return clientesPossiveis;
+  }
+  
+  return null;
+}
+
 /* ============ CADASTRO DE CLIENTE - CORRIGIDO ============ */
 function cadastrarClienteEPedido() {
+  if (isProcessing) return;
+  isProcessing = true;
+  
   // Ler todos os campos
   var numero = document.getElementById('ocrNum') ? document.getElementById('ocrNum').value.trim() : '';
   var codigo = document.getElementById('ocrCod') ? document.getElementById('ocrCod').value.trim() : '';
@@ -725,8 +783,6 @@ function cadastrarClienteEPedido() {
   var cidade = document.getElementById('clienteCidade') ? document.getElementById('clienteCidade').value.trim() : '';
   var cnpj = document.getElementById('clienteCnpj') ? document.getElementById('clienteCnpj').value.trim() : '';
   var telefone = document.getElementById('clienteTelefone') ? document.getElementById('clienteTelefone').value.trim() : '';
-  
-  console.log('Dados do formulário:', { numero, codigo, apelido, nome, rua, numeroEnd, bairro, cidade });
   
   // Validar campos obrigatórios e destacar os vazios
   var camposObrigatorios = [
@@ -758,9 +814,10 @@ function cadastrarClienteEPedido() {
   }
   
   if (camposFaltando.length > 0) {
-    var msg = '⚠️ Preencha os campos:\n\n• ' + camposFaltando.join('\n• ');
+    var msg = '️ Preencha os campos:\n\n• ' + camposFaltando.join('\n• ');
     alert(msg);
     toast('Preencha: ' + camposFaltando.join(', '), 'error');
+    isProcessing = false;
     return;
   }
   
@@ -771,7 +828,7 @@ function cadastrarClienteEPedido() {
   if (cep) enderecoCompleto += ' (CEP: ' + cep + ')';
   
   // Verificar se cliente já existe (pelo código)
-  var clienteExistente = db.clientes.find(function(c) { return c.codigo === codigo; });
+  var clienteExistente = db.clientes.find(function(c) { return c.codigo.toString().trim().toUpperCase() === codigo.toString().trim().toUpperCase(); });
   
   if (clienteExistente) {
     // Atualizar dados do cliente existente
@@ -828,15 +885,19 @@ function cadastrarClienteEPedido() {
   
   toast('Pedido separado com sucesso!', 'success');
   closeModal();
+  isProcessing = false;
   renderSeparacao();
 }
 
 function confirmarPedidoCadastrado(modo, foto) {
+  if (isProcessing) return;
+  isProcessing = true;
+  
   var numero = document.getElementById('ocrNum').value.trim();
   var codigo = document.getElementById('ocrCod').value.trim();
-  if (!numero) { alert('Informe o número do pedido'); return; }
+  if (!numero) { alert('Informe o número do pedido'); isProcessing = false; return; }
   
-  var cliente = db.clientes.find(function(c) { return c.codigo === codigo; });
+  var cliente = db.clientes.find(function(c) { return c.codigo.toString().trim().toUpperCase() === codigo.toString().trim().toUpperCase(); });
   db.pedidos.push({
     id: Date.now(),
     numero: numero,
@@ -852,11 +913,13 @@ function confirmarPedidoCadastrado(modo, foto) {
   saveDB();
   toast('Pedido separado com sucesso', 'success');
   closeModal();
+  isProcessing = false;
   renderSeparacao();
 }
 
 /* ============ CÂMERA ============ */
 async function openCamera(modo) {
+  if (isProcessing) return;
   if (typeof Tesseract === 'undefined') {
     showModal('<h2>⚠️ OCR Não Disponível</h2><p style="margin-bottom:15px; font-size:14px;">A biblioteca de reconhecimento de texto não foi carregada.</p><button class="btn btn-block" onclick="closeModal(); entradaManual(\'' + modo + '\')">✏️ Inserir Dados Manualmente</button><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Fechar</button></div>');
     return;
@@ -877,13 +940,16 @@ async function openCamera(modo) {
   }
 }
 function showFocusRing(e) { var ring = document.getElementById('focusRing'); if (!ring) return; var rect = e.currentTarget.getBoundingClientRect(); ring.style.left = (e.clientX - rect.left - 30) + 'px'; ring.style.top = (e.clientY - rect.top - 30) + 'px'; ring.classList.remove('active'); void ring.offsetWidth; ring.classList.add('active'); }
-function doCapture() { if (!cameraStream) return; capturePhoto(currentCameraModo); }
+function doCapture() { if (!cameraStream || isProcessing) return; capturePhoto(currentCameraModo); }
 function stopCamera() { if (cameraStream) { cameraStream.getTracks().forEach(function(t) { t.stop(); }); cameraStream = null; } }
 function closeCamera() { stopCamera(); document.getElementById('modalContainer').innerHTML = ''; }
 
 async function capturePhoto(modo) {
+  if (isProcessing) return;
+  isProcessing = true;
+  
   var video = document.getElementById('camVideo');
-  if (!video || !video.videoWidth) { toast('Câmera não está pronta', 'error'); return; }
+  if (!video || !video.videoWidth) { toast('Câmera não está pronta', 'error'); isProcessing = false; return; }
   var canvas = document.createElement('canvas');
   var w = video.videoWidth; var h = video.videoHeight;
   if (w > h) { canvas.width = h; canvas.height = w; var ctx = canvas.getContext('2d'); ctx.translate(canvas.width, 0); ctx.rotate(90 * Math.PI / 180); ctx.drawImage(video, 0, 0, w, h); }
@@ -915,7 +981,7 @@ async function capturePhoto(modo) {
     if (barcodeResult && barcodeResult.text) {
       var bn = barcodeResult.text.replace(/[^0-9]/g, '').slice(-8);
       var on = dados.numero ? dados.numero.replace(/[^0-9]/g, '').slice(-8) : '';
-      if (on && bn && on !== bn) { if (statusEl) statusEl.textContent = '⚠️ Divergência!'; await scanBarcodeOnly(foto, dados, modo); return; }
+      if (on && bn && on !== bn) { if (statusEl) statusEl.textContent = '⚠️ Divergência!'; await scanBarcodeOnly(foto, dados, modo); isProcessing = false; return; }
       else if (bn && !on) { dados.numero = bn; }
     }
     
@@ -924,14 +990,22 @@ async function capturePhoto(modo) {
     fotoAtual = foto;
     modoAtual = modo;
     
-    // Buscar cliente
-    var clienteExistente = db.clientes.find(function(c) { return c.codigo === dados.codigo; });
+    // Buscar cliente com busca inteligente
+    var resultadoBusca = buscarClientePorCodigo(dados.codigo);
     
-    if (clienteExistente) {
-      var endCompleto = clienteExistente.rua + ', ' + clienteExistente.numero + ' - ' + clienteExistente.bairro + ', ' + clienteExistente.cidade;
-      if (clienteExistente.cep) endCompleto += ' (CEP: ' + clienteExistente.cep + ')';
+    if (Array.isArray(resultadoBusca)) {
+      // Múltiplos clientes encontrados - mostrar lista
+      var listaHtml = resultadoBusca.map(function(c, idx) {
+        return '<label class="checkbox-item"><input type="radio" name="clienteSelect" value="' + c.codigo + '" ' + (idx === 0 ? 'checked' : '') + '><div class="info"><div class="pedido-num">' + c.apelido + '</div><div class="pedido-cli">Código: ' + c.codigo + '</div><div class="pedido-cli">' + c.endereco + '</div></div></label>';
+      }).join('');
       
-      showModal('<h2>✅ Cliente Conhecido</h2><img src="' + foto + '" style="width:100%; max-height:150px; object-fit:contain; border-radius:8px; margin-bottom:15px;"><p style="margin-bottom:15px; color:var(--success); font-weight:700;">Cliente: <b>' + clienteExistente.apelido + '</b></p><div class="form-group"><label>Número do Pedido</label><input id="ocrNum" value="' + dados.numero + '"></div><div class="form-group"><label>Código do Cliente</label><input value="' + dados.codigo + '" readonly></div><div class="form-group"><label>Cliente</label><input value="' + clienteExistente.apelido + '" readonly></div><div class="form-group"><label>Endereço</label><textarea rows="2" readonly>' + endCompleto + '</textarea></div><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-success" onclick="confirmarPedidoCadastrado(\'' + modo + '\', \'' + foto.replace(/'/g, "\\'") + '\')">✓ Confirmar</button></div>');
+      showModal('<h2>Cliente Encontrado</h2><p style="margin-bottom:15px;">Encontramos múltiplos clientes com código similar. Escolha o correto:</p>' + listaHtml + '<div class="form-group"><label>Número do Pedido</label><input id="ocrNum" value="' + dados.numero + '"></div><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-success" onclick="confirmarPedidoSelecionado(\'' + modo + '\', \'' + foto.replace(/'/g, "\\'") + '\')">✓ Confirmar</button></div>');
+    } else if (resultadoBusca) {
+      // Cliente encontrado
+      var endCompleto = resultadoBusca.rua + ', ' + resultadoBusca.numero + ' - ' + resultadoBusca.bairro + ', ' + resultadoBusca.cidade;
+      if (resultadoBusca.cep) endCompleto += ' (CEP: ' + resultadoBusca.cep + ')';
+      
+      showModal('<h2>✅ Cliente Conhecido</h2><img src="' + foto + '" style="width:100%; max-height:150px; object-fit:contain; border-radius:8px; margin-bottom:15px;"><p style="margin-bottom:15px; color:var(--success); font-weight:700;">Cliente: <b>' + resultadoBusca.apelido + '</b></p><div class="form-group"><label>Número do Pedido</label><input id="ocrNum" value="' + dados.numero + '"></div><div class="form-group"><label>Código do Cliente</label><input value="' + dados.codigo + '" readonly></div><div class="form-group"><label>Cliente</label><input value="' + resultadoBusca.apelido + '" readonly></div><div class="form-group"><label>Endereço</label><textarea rows="2" readonly>' + endCompleto + '</textarea></div><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-success" onclick="confirmarPedidoCadastrado(\'' + modo + '\', \'' + foto.replace(/'/g, "\\'") + '\')">✓ Confirmar</button></div>');
     } else {
       // Novo cliente - tela de cadastro com CEP
       showModal('<h2> Novo Cliente</h2><p style="margin-bottom:15px; color:var(--warning); font-weight:700;">Primeiro pedido para este cliente. Complete o cadastro:</p>' +
@@ -958,6 +1032,36 @@ async function capturePhoto(modo) {
     if (camContainer) camContainer.style.display = 'block';
     if (camControls) camControls.style.display = 'flex';
   }
+  isProcessing = false;
+}
+
+function confirmarPedidoSelecionado(modo, foto) {
+  var radios = document.getElementsByName('clienteSelect');
+  var codigoSelecionado = null;
+  for (var i = 0; i < radios.length; i++) {
+    if (radios[i].checked) { codigoSelecionado = radios[i].value; break; }
+  }
+  if (!codigoSelecionado) { toast('Selecione um cliente', 'error'); return; }
+  
+  var numero = document.getElementById('ocrNum').value.trim();
+  var cliente = db.clientes.find(function(c) { return c.codigo.toString().trim().toUpperCase() === codigoSelecionado.toString().trim().toUpperCase(); });
+  
+  db.pedidos.push({
+    id: Date.now(),
+    numero: numero,
+    codigoCliente: codigoSelecionado,
+    cliente: cliente ? cliente.apelido : codigoSelecionado,
+    endereco: cliente ? cliente.endereco : '',
+    separador: currentUser.nome,
+    separadorId: currentUser.id,
+    dataSeparacao: new Date().toISOString(),
+    status: 'SEPARADO',
+    fotoSeparacao: foto
+  });
+  saveDB();
+  toast('Pedido separado com sucesso', 'success');
+  closeModal();
+  renderSeparacao();
 }
 
 async function scanBarcodeOnly(fotoOriginal, dadosOCR, modo) {
@@ -976,9 +1080,9 @@ async function scanBarcodeOnly(fotoOriginal, dadosOCR, modo) {
           dadosOCR.numero = bn;
           toast('Número corrigido: ' + bn, 'success');
           
-          var clienteExistente = db.clientes.find(function(c) { return c.codigo === dadosOCR.codigo; });
-          if (clienteExistente) {
-            showModal('<h2>✅ Cliente Conhecido</h2><div class="form-group"><label>Número do Pedido ✓</label><input value="' + bn + '" readonly></div><div class="form-group"><label>Cliente</label><input value="' + clienteExistente.apelido + '" readonly></div><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-success" onclick="confirmarPedidoCadastrado(\'' + modo + '\', \'' + fotoOriginal.replace(/'/g, "\\'") + '\')">✓ Confirmar</button></div>');
+          var resultadoBusca = buscarClientePorCodigo(dadosOCR.codigo);
+          if (resultadoBusca && !Array.isArray(resultadoBusca)) {
+            showModal('<h2>✅ Cliente Conhecido</h2><div class="form-group"><label>Número do Pedido ✓</label><input value="' + bn + '" readonly></div><div class="form-group"><label>Cliente</label><input value="' + resultadoBusca.apelido + '" readonly></div><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-success" onclick="confirmarPedidoCadastrado(\'' + modo + '\', \'' + fotoOriginal.replace(/'/g, "\\'") + '\')">✓ Confirmar</button></div>');
           } else {
             fotoAtual = fotoOriginal; modoAtual = modo;
             showModal('<h2>📋 Novo Cliente</h2><div class="form-group"><label>Nº do Pedido <span class="required">*</span></label><input id="ocrNum" value="' + bn + '"></div><div class="form-group"><label>Código <span class="required">*</span></label><input id="ocrCod" value="' + dadosOCR.codigo + '"></div><div class="form-group"><label>Apelido <span class="required">*</span></label><input id="clienteApelido"></div><div class="form-group"><label>Nome Completo</label><input id="clienteNome"></div><div class="endereco-section"><h4>📍 Endereço</h4><div class="form-group"><label>CEP</label><div class="cep-group"><input id="clienteCep" maxlength="9" oninput="formatarCep(this)"><button class="btn btn-sm" onclick="buscarCep()">🔍</button></div><div id="cepStatus" class="cep-status"></div></div><div class="form-group"><label>Rua <span class="required">*</span></label><input id="clienteRua"></div><div class="endereco-row"><div class="form-group"><label>Número <span class="required">*</span></label><input id="clienteNumero"></div><div class="form-group"><label>Complemento</label><input id="clienteComplemento"></div></div><div class="form-group"><label>Bairro <span class="required">*</span></label><input id="clienteBairro"></div><div class="form-group"><label>Cidade - UF <span class="required">*</span></label><input id="clienteCidade"></div></div><div class="form-group"><label>CNPJ</label><input id="clienteCnpj"></div><div class="form-group"><label>Telefone</label><input id="clienteTelefone"></div><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-success" onclick="cadastrarClienteEPedido()">✓ Cadastrar</button></div>');
@@ -1010,7 +1114,7 @@ function parseOCR(text) {
 
 /* ============ MODAL ============ */
 function showModal(html) { document.getElementById('modalContainer').innerHTML = '<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal">' + html + '</div></div>'; }
-function closeModal() { stopCamera(); document.getElementById('modalContainer').innerHTML = ''; }
+function closeModal() { stopCamera(); document.getElementById('modalContainer').innerHTML = ''; isProcessing = false; }
 
 /* ============ UTILS ============ */
 function formatDT(iso) { if (!iso) return '-'; var d = new Date(iso); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
