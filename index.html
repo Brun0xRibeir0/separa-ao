@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Sistema de Separação e Entrega</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
+<script src="https://unpkg.com/@zxing/library@latest"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
@@ -173,96 +174,18 @@ tr:hover { background: var(--surface-2); }
 .modal h2 { margin-bottom: 15px; color: var(--primary); font-size: 20px; }
 .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; flex-wrap: wrap; }
 
-/* ============ CÂMERA - TELA CHEIA NO MOBILE ============ */
-.camera-wrapper {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-}
-.camera-container {
-  position: relative;
-  width: 100%;
-  height: 50vh;
-  background: #000;
-  border-radius: 12px;
-  overflow: hidden;
-  cursor: pointer;
-  border: 3px solid var(--primary);
-  flex-shrink: 0;
-}
-.camera-container video {
-  width: 100%;
-  height: 100%;
-  display: block;
-  object-fit: cover;
-  background: #000;
-}
-.camera-hint {
-  position: absolute;
-  top: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0,0,0,0.7);
-  color: #fff;
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 700;
-  pointer-events: none;
-  z-index: 5;
-  white-space: nowrap;
-}
-.camera-focus-ring {
-  position: absolute;
-  width: 60px;
-  height: 60px;
-  border: 2px solid #fff;
-  border-radius: 50%;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.3s;
-  z-index: 4;
-}
+/* CÂMERA */
+.camera-wrapper { display: flex; flex-direction: column; width: 100%; }
+.camera-container { position: relative; width: 100%; height: 50vh; background: #000; border-radius: 12px; overflow: hidden; cursor: pointer; border: 3px solid var(--primary); flex-shrink: 0; }
+.camera-container video { width: 100%; height: 100%; display: block; object-fit: cover; background: #000; }
+.camera-hint { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); color: #fff; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; pointer-events: none; z-index: 5; white-space: nowrap; }
+.camera-focus-ring { position: absolute; width: 60px; height: 60px; border: 2px solid #fff; border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 4; }
 .camera-focus-ring.active { opacity: 1; animation: focusPulse 0.6s ease-out; }
-@keyframes focusPulse {
-  0% { transform: scale(1.5); opacity: 1; }
-  100% { transform: scale(1); opacity: 0; }
-}
-.camera-controls {
-  display: flex;
-  gap: 15px;
-  justify-content: center;
-  align-items: center;
-  padding: 15px 0 5px 0;
-  flex-shrink: 0;
-}
-.btn-capture {
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
-  background: var(--success);
-  border: 4px solid #fff;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 30px;
-  cursor: pointer;
-  transition: transform 0.15s;
-  flex-shrink: 0;
-}
+@keyframes focusPulse { 0% { transform: scale(1.5); opacity: 1; } 100% { transform: scale(1); opacity: 0; } }
+.camera-controls { display: flex; gap: 15px; justify-content: center; align-items: center; padding: 15px 0 5px 0; flex-shrink: 0; }
+.btn-capture { width: 70px; height: 70px; border-radius: 50%; background: var(--success); border: 4px solid #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; font-size: 30px; cursor: pointer; transition: transform 0.15s; flex-shrink: 0; }
 .btn-capture:active { transform: scale(0.9); }
-.btn-cancel-cam {
-  padding: 12px 20px;
-  border-radius: 25px;
-  background: var(--surface-2);
-  color: var(--text);
-  font-weight: 800;
-  font-size: 14px;
-  border: none;
-  cursor: pointer;
-  flex-shrink: 0;
-}
+.btn-cancel-cam { padding: 12px 20px; border-radius: 25px; background: var(--surface-2); color: var(--text); font-weight: 800; font-size: 14px; border: none; cursor: pointer; flex-shrink: 0; }
 .ocr-progress { width: 100%; background: var(--surface-2); border-radius: 8px; height: 16px; margin-top: 10px; overflow: hidden; flex-shrink: 0; }
 .ocr-progress-bar { height: 100%; background: var(--primary); transition: width 0.3s; border-radius: 8px; }
 .ocr-status { margin-top: 8px; text-align: center; color: var(--text-soft); font-size: 13px; font-weight: 700; flex-shrink: 0; }
@@ -275,102 +198,13 @@ tr:hover { background: var(--surface-2); }
 .toast.warning { border-left-color: var(--warning); }
 @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
-/* ============ RESPONSIVO ============ */
-@media (max-width: 968px) {
-  .dashboard-grid { grid-template-columns: 1fr; }
-  .stats-grid { grid-template-columns: repeat(2, 1fr); }
-}
-
-@media (max-width: 768px) {
-  .sidebar { transform: translateX(-100%); width: 260px; }
-  .sidebar.open { transform: translateX(0); }
-  .main { margin-left: 0; padding: 12px; width: 100%; }
-  .menu-toggle { display: block; }
-  .topbar { padding: 12px 15px; margin-bottom: 15px; }
-  .topbar h1 { font-size: 17px; }
-  .card { padding: 15px; margin-bottom: 15px; }
-  .card-title { font-size: 16px; margin-bottom: 12px; }
-  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-  .stat-card { padding: 15px 12px; }
-  .stat-card .value { font-size: 24px; }
-  .stat-card .label { font-size: 11px; }
-  .filters { grid-template-columns: 1fr; gap: 8px; }
-  table { font-size: 13px; min-width: 500px; }
-  th, td { padding: 10px 8px; font-size: 12px; }
-  .btn { padding: 12px 16px; font-size: 15px; min-height: 44px; }
-  .btn-sm { padding: 8px 12px; font-size: 13px; min-height: 38px; }
-  
-  /* Câmera maior no mobile */
-  .camera-container { height: 60vh; }
-  .btn-capture { width: 64px; height: 64px; font-size: 28px; }
-}
-
-/* MOBILE PEQUENO - Câmera quase tela cheia */
-@media (max-width: 480px) {
-  .login-box { padding: 25px 18px; }
-  .login-box h1 { font-size: 20px; }
-  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
-  .stat-card { padding: 12px 10px; }
-  .stat-card .value { font-size: 22px; }
-  table { font-size: 11px; min-width: 450px; }
-  th, td { padding: 8px 6px; font-size: 11px; }
-  .form-group input, .form-group select, .form-group textarea { font-size: 14px; padding: 10px 12px; }
-  
-  /* Câmera ocupa quase toda a tela */
-  .camera-container { height: 65vh; border-radius: 8px; }
-  .btn-capture { width: 60px; height: 60px; font-size: 26px; }
-  .btn-cancel-cam { padding: 10px 16px; font-size: 13px; }
-}
-
-/* LANDSCAPE - Câmera máxima */
-@media (max-width: 896px) and (orientation: landscape) {
-  .modal { max-height: 98vh; padding: 8px; }
-  .camera-container { height: 75vh; }
-  .main { padding: 10px; }
-  .card { padding: 12px; margin-bottom: 12px; }
-}
-
-/* MODAL DE CÂMERA - TELA CHEIA NO MOBILE */
-@media (max-width: 768px) {
-  .modal-overlay.camera-modal {
-    padding: 0;
-    align-items: stretch;
-  }
-  .modal-overlay.camera-modal .modal {
-    margin: 0;
-    max-width: 100%;
-    max-height: 100vh;
-    height: 100vh;
-    border-radius: 0;
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-  }
-  .modal-overlay.camera-modal .modal h2 {
-    font-size: 16px;
-    margin-bottom: 8px;
-    flex-shrink: 0;
-  }
-  .modal-overlay.camera-modal .camera-wrapper {
-    flex: 1;
-    min-height: 0;
-  }
-  .modal-overlay.camera-modal .camera-container {
-    height: 100%;
-    flex: 1;
-    border-radius: 8px;
-  }
-}
-
-@media (max-width: 480px) {
-  .modal-overlay.camera-modal .modal {
-    padding: 6px;
-  }
-  .modal-overlay.camera-modal .modal h2 {
-    font-size: 14px;
-    margin-bottom: 6px;
-  }
-}
+/* RESPONSIVO */
+@media (max-width: 968px) { .dashboard-grid { grid-template-columns: 1fr; } .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 768px) { .sidebar { transform: translateX(-100%); width: 260px; } .sidebar.open { transform: translateX(0); } .main { margin-left: 0; padding: 12px; width: 100%; } .menu-toggle { display: block; } .topbar { padding: 12px 15px; margin-bottom: 15px; } .topbar h1 { font-size: 17px; } .card { padding: 15px; margin-bottom: 15px; } .card-title { font-size: 16px; margin-bottom: 12px; } .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; } .stat-card { padding: 15px 12px; } .stat-card .value { font-size: 24px; } .stat-card .label { font-size: 11px; } .filters { grid-template-columns: 1fr; gap: 8px; } table { font-size: 13px; min-width: 500px; } th, td { padding: 10px 8px; font-size: 12px; } .btn { padding: 12px 16px; font-size: 15px; min-height: 44px; } .btn-sm { padding: 8px 12px; font-size: 13px; min-height: 38px; } .camera-container { height: 60vh; } .btn-capture { width: 64px; height: 64px; font-size: 28px; } }
+@media (max-width: 480px) { .login-box { padding: 25px 18px; } .login-box h1 { font-size: 20px; } .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; } .stat-card { padding: 12px 10px; } .stat-card .value { font-size: 22px; } table { font-size: 11px; min-width: 450px; } th, td { padding: 8px 6px; font-size: 11px; } .form-group input, .form-group select, .form-group textarea { font-size: 14px; padding: 10px 12px; } .camera-container { height: 65vh; border-radius: 8px; } .btn-capture { width: 60px; height: 60px; font-size: 26px; } .btn-cancel-cam { padding: 10px 16px; font-size: 13px; } }
+@media (max-width: 896px) and (orientation: landscape) { .modal { max-height: 98vh; padding: 8px; } .camera-container { height: 75vh; } .main { padding: 10px; } .card { padding: 12px; margin-bottom: 12px; } }
+@media (max-width: 768px) { .modal-overlay.camera-modal { padding: 0; align-items: stretch; } .modal-overlay.camera-modal .modal { margin: 0; max-width: 100%; max-height: 100vh; height: 100vh; border-radius: 0; padding: 10px; display: flex; flex-direction: column; } .modal-overlay.camera-modal .modal h2 { font-size: 16px; margin-bottom: 8px; flex-shrink: 0; } .modal-overlay.camera-modal .camera-wrapper { flex: 1; min-height: 0; } .modal-overlay.camera-modal .camera-container { height: 100%; flex: 1; border-radius: 8px; } }
+@media (max-width: 480px) { .modal-overlay.camera-modal .modal { padding: 6px; } .modal-overlay.camera-modal .modal h2 { font-size: 14px; margin-bottom: 6px; } }
 </style>
 </head>
 <body>
@@ -411,7 +245,7 @@ tr:hover { background: var(--surface-2); }
 
 <script>
 /* ============ ESTADO ============ */
-const DB_KEY = 'sep_entrega_db_v7';
+const DB_KEY = 'sep_entrega_db_v8';
 let db = {
   users: [
     { id: 1, login: 'admin', pass: 'admin', nome: 'Administrador', funcao: 'admin', ativo: true },
@@ -427,6 +261,7 @@ let currentUser = null;
 let currentView = 'dashboard';
 let cameraStream = null;
 let currentCameraModo = null;
+let zxingCodeReader = null;
 
 function loadDB() {
   const saved = localStorage.getItem(DB_KEY);
@@ -729,15 +564,13 @@ function exportPDF() {
   doc.save('relatorio_' + new Date().toISOString().split('T')[0] + '.pdf'); toast('PDF exportado', 'success');
 }
 
-/* ============ CÂMERA - TELA CHEIA NO MOBILE ============ */
+/* ============ CÂMERA COM CÓDIGO DE BARRAS ============ */
 async function openCamera(modo) {
   if (typeof Tesseract === 'undefined') {
     showModal('<h2>⚠️ OCR Não Disponível</h2><p style="margin-bottom:15px; font-size:14px;">A biblioteca de reconhecimento de texto não foi carregada.</p><button class="btn btn-block" onclick="closeModal(); entradaManual(\'' + modo + '\')">✏️ Inserir Dados Manualmente</button><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Fechar</button></div>');
     return;
   }
   currentCameraModo = modo;
-  
-  // Detectar se é mobile para usar modal tela cheia
   var isMobile = window.innerWidth <= 768;
   var overlayClass = isMobile ? 'modal-overlay camera-modal' : 'modal-overlay';
   
@@ -823,7 +656,8 @@ async function capturePhoto(modo) {
   if (camControls) camControls.style.display = 'none';
   
   try {
-    var result = await Tesseract.recognize(foto, 'por', {
+    // Processar OCR e Código de Barras em paralelo
+    var ocrResult = await Tesseract.recognize(foto, 'por', {
       logger: function(m) {
         if (m.status === 'recognizing text') {
           var pct = Math.round(m.progress * 100);
@@ -833,9 +667,51 @@ async function capturePhoto(modo) {
         }
       }
     });
-    var text = result.data.text;
+    
+    // Ler código de barras
+    var barcodeResult = null;
+    try {
+      if (!zxingCodeReader) {
+        zxingCodeReader = new ZXing.BrowserMultiFormatReader();
+      }
+      var tempImg = new Image();
+      tempImg.src = foto;
+      await new Promise(function(resolve) { tempImg.onload = resolve; });
+      var tempCanvas = document.createElement('canvas');
+      tempCanvas.width = tempImg.width;
+      tempCanvas.height = tempImg.height;
+      tempCanvas.getContext('2d').drawImage(tempImg, 0, 0);
+      barcodeResult = await zxingCodeReader.decodeFromCanvas(tempCanvas);
+      console.log('Código de barras lido:', barcodeResult.text);
+    } catch (e) {
+      console.log('Código de barras não detectado:', e.message);
+    }
+    
+    var text = ocrResult.data.text;
     console.log('OCR Texto:', text);
     var dados = parseOCR(text);
+    
+    // VALIDAÇÃO: Comparar número do pedido com código de barras
+    if (barcodeResult && barcodeResult.text) {
+      var barcodeNumero = barcodeResult.text.replace(/[^0-9]/g, '').slice(-8);
+      var ocrNumero = dados.numero ? dados.numero.replace(/[^0-9]/g, '').slice(-8) : '';
+      
+      console.log('Validação - OCR:', ocrNumero, 'vs Código de Barras:', barcodeNumero);
+      
+      if (ocrNumero && barcodeNumero && ocrNumero !== barcodeNumero) {
+        // Divergência! Pedir para escanear só o código de barras
+        if (statusEl) statusEl.textContent = '⚠️ Divergência detectada! Escaneie o código de barras...';
+        await scanBarcodeOnly(foto, dados, modo);
+        return;
+      } else if (barcodeNumero && !ocrNumero) {
+        // OCR não pegou, mas código de barras pegou
+        dados.numero = barcodeNumero;
+        toast('Número do pedido obtido do código de barras', 'success');
+      } else if (ocrNumero === barcodeNumero) {
+        toast('Número do pedido confirmado pelo código de barras ✓', 'success');
+      }
+    }
+    
     if (statusEl) statusEl.textContent = 'OCR concluído!';
     
     showModal('<h2>Confirmar Dados do Pedido</h2><img src="' + foto + '" style="width:100%; max-height:200px; object-fit:contain; border-radius:8px; margin-bottom:15px;"><div class="form-group"><label>Número do Pedido</label><input id="ocrNum" value="' + dados.numero + '"></div><div class="form-group"><label>Data do Pedido</label><input id="ocrData" value="' + dados.data + '"></div><div class="form-group"><label>Código do Cliente</label><input id="ocrCod" value="' + dados.codigo + '"></div><div class="form-group"><label>Nome do Cliente</label><input id="ocrCli" value="' + dados.cliente + '"></div><div class="form-group"><label>Endereço</label><textarea id="ocrEnd" rows="3">' + dados.endereco + '</textarea></div><details style="margin-top:10px;"><summary style="cursor:pointer; font-weight:800; font-size:13px;">📄 Ver texto OCR completo</summary><pre style="background:var(--surface-2); padding:10px; border-radius:8px; font-size:11px; overflow-x:auto; white-space:pre-wrap; margin-top:5px; max-height:150px; overflow-y:auto;">' + text.replace(/</g, '&lt;') + '</pre></details><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-success" onclick="confirmarPedido(\'' + modo + '\', \'' + foto.replace(/'/g, "\\'") + '\')">✓ Confirmar</button></div>');
@@ -845,6 +721,64 @@ async function capturePhoto(modo) {
     if (camContainer) camContainer.style.display = 'block';
     if (camControls) camControls.style.display = 'flex';
   }
+}
+
+/* ============ ESCANEAR SÓ CÓDIGO DE BARRAS ============ */
+async function scanBarcodeOnly(fotoOriginal, dadosOCR, modo) {
+  return new Promise(function(resolve) {
+    showModal('<h2>📊 Escanear Código de Barras</h2><p style="margin-bottom:15px; font-size:14px; color:var(--text-soft);">O número do pedido do OCR diverge do código de barras. Por favor, escaneie o código de barras para corrigir.</p>' +
+      '<div class="camera-wrapper">' +
+        '<div class="camera-container" id="barcodeCamContainer" style="height:40vh;">' +
+          '<video id="barcodeVideo" autoplay playsinline muted></video>' +
+        '</div>' +
+        '<div class="camera-controls">' +
+          '<button class="btn-cancel-cam" onclick="closeBarcodeScanner()">✕ Cancelar</button>' +
+        '</div>' +
+      '</div>'
+    );
+    
+    var modal = document.querySelector('.modal-overlay');
+    var video = document.getElementById('barcodeVideo');
+    
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } })
+      .then(function(stream) {
+        video.srcObject = stream;
+        var codeReader = new ZXing.BrowserMultiFormatReader();
+        
+        function tryDecode() {
+          if (!document.getElementById('barcodeVideo')) return;
+          codeReader.decodeFromVideoDevice(null, video, function(result, err) {
+            if (result) {
+              var barcodeNum = result.text.replace(/[^0-9]/g, '').slice(-8);
+              console.log('Código de barras lido:', barcodeNum);
+              stream.getTracks().forEach(function(t) { t.stop(); });
+              closeModal();
+              
+              // Atualizar número do pedido
+              dadosOCR.numero = barcodeNum;
+              toast('Número do pedido corrigido: ' + barcodeNum, 'success');
+              
+              // Mostrar confirmação
+              showModal('<h2>Confirmar Dados do Pedido</h2><img src="' + fotoOriginal + '" style="width:100%; max-height:200px; object-fit:contain; border-radius:8px; margin-bottom:15px;"><div class="form-group"><label>Número do Pedido <span style="color:var(--success);">(✓ Código de Barras)</span></label><input id="ocrNum" value="' + dadosOCR.numero + '"></div><div class="form-group"><label>Data do Pedido</label><input id="ocrData" value="' + dadosOCR.data + '"></div><div class="form-group"><label>Código do Cliente</label><input id="ocrCod" value="' + dadosOCR.codigo + '"></div><div class="form-group"><label>Nome do Cliente</label><input id="ocrCli" value="' + dadosOCR.cliente + '"></div><div class="form-group"><label>Endereço</label><textarea id="ocrEnd" rows="3">' + dadosOCR.endereco + '</textarea></div><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-success" onclick="confirmarPedido(\'' + modo + '\', \'' + fotoOriginal.replace(/'/g, "\\'") + '\')">✓ Confirmar</button></div>');
+            }
+          });
+        }
+        
+        setTimeout(tryDecode, 1000);
+      })
+      .catch(function(e) {
+        toast('Erro ao acessar câmera: ' + e.message, 'error');
+        resolve();
+      });
+  });
+}
+
+function closeBarcodeScanner() {
+  var video = document.getElementById('barcodeVideo');
+  if (video && video.srcObject) {
+    video.srcObject.getTracks().forEach(function(t) { t.stop(); });
+  }
+  closeModal();
 }
 
 /* ============ ENTRADA MANUAL ============ */
@@ -865,60 +799,33 @@ function confirmarManual(modo) {
 }
 
 /* ============ PARSER OCR ============ */
-/* ============ PARSER OCR - VERSÃO ROBUSTA ============ */
 function parseOCR(text) {
   var linhas = text.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
   var t = text.toUpperCase();
   var numero = '', data = '', codigo = '', cliente = '', endereco = '';
   
-  console.log('=== INÍCIO DO PARSER ===');
-  console.log('Texto OCR:', text);
+  var mPedido1 = t.match(/(?:ABERIO|ABERTO|ABERT0)\s*[-–]?\s*N[O0º°]?\s*([0-9]+)/);
+  if (mPedido1) { numero = mPedido1[1].replace(/[^0-9]/g, ''); }
   
-  // ========== 1. NÚMERO DO PEDIDO ==========
-  // Tentativa 1: Padrão completo "ABERTO - No 0000164381"
-  var m1 = t.match(/(?:ABERIO|ABERTO|ABERT0)\s*[-–]?\s*N[O0º°]?\s*([0-9]+)/);
-  if (m1) {
-    numero = m1[1].replace(/[^0-9]/g, '');
-    console.log('Número encontrado (padrão 1):', numero);
-  }
-  
-  // Tentativa 2: "PEDIDO" seguido de número
   if (!numero) {
     var idxPed = t.indexOf('PEDIDO');
     if (idxPed >= 0) {
       var resto = t.substring(idxPed, idxPed + 100);
       var m2 = resto.match(/N[O0º°]?\s*([0-9]+)/);
-      if (m2) {
-        numero = m2[1].replace(/[^0-9]/g, '');
-        console.log('Número encontrado (padrão 2):', numero);
-      }
+      if (m2) { numero = m2[1].replace(/[^0-9]/g, ''); }
     }
   }
   
-  // Tentativa 3: Qualquer sequência de 6+ dígitos após "NO" ou "Nº"
   if (!numero) {
     var m3 = t.match(/N[O0º°]\s*([0-9]{6,})/);
-    if (m3) {
-      numero = m3[1].replace(/[^0-9]/g, '');
-      console.log('Número encontrado (padrão 3):', numero);
-    }
+    if (m3) { numero = m3[1].replace(/[^0-9]/g, ''); }
   }
   
-  // Validar: deve ter pelo menos 6 dígitos
-  if (numero && numero.length < 6) {
-    console.log('Número muito curto, ignorando:', numero);
-    numero = '';
-  }
+  if (numero && numero.length < 6) numero = '';
   
-  // ========== 2. DATA ==========
   var mData = t.match(/(\d{2}\/\d{2}\/\d{4})/);
-  if (mData) {
-    data = mData[1];
-    console.log('Data encontrada:', data);
-  }
+  if (mData) data = mData[1];
   
-  // ========== 3. CÓDIGO E NOME DO CLIENTE ==========
-  // Estratégia: Procurar após "CUPOM SEM VALOR FISCAL"
   var idxCupom = t.indexOf('CUPOM SEM VALOR FISCAL');
   if (idxCupom < 0) idxCupom = t.indexOf('GUPOM SEM VALOR FISCAL');
   if (idxCupom < 0) idxCupom = t.indexOf('CUPOM');
@@ -927,30 +834,17 @@ function parseOCR(text) {
     var textoApos = text.substring(idxCupom);
     var linhasApos = textoApos.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0 && l.length < 150; });
     
-    console.log('Linhas após CUPOM:', linhasApos);
-    
-    // Tentativa 1: Padrão "683 - MUNHOZ ACESSORIOS..."
     for (var i = 0; i < linhasApos.length; i++) {
       var linha = linhasApos[i];
-      // Regex mais flexível: número, espaço, traço, espaço, texto
       var mCliente = linha.match(/^(\d{2,5})\s*[-–—]\s*(.+?)(?:\s*[-–]\s*LIDA?\s*$|\s*LIDA?\s*$|\s*ME\s*$|\s*EPP\s*$|$)/i);
       if (mCliente) {
         codigo = mCliente[1];
         cliente = mCliente[2].trim();
-        // Limpar sufixos
-        cliente = cliente.replace(/\s*[-–]\s*LIDA?\s*$/i, '')
-                        .replace(/\s*LIDA?\s*$/i, '')
-                        .replace(/\s*LTDA\.?\s*$/i, '')
-                        .replace(/\s*ME\s*$/i, '')
-                        .replace(/\s*EPP\s*$/i, '')
-                        .replace(/[|&]/g, '')
-                        .trim();
-        console.log('Cliente encontrado (padrão 1):', codigo, '-', cliente);
+        cliente = cliente.replace(/\s*[-–]\s*LIDA?\s*$/i, '').replace(/\s*LIDA?\s*$/i, '').replace(/\s*LTDA\.?\s*$/i, '').replace(/\s*ME\s*$/i, '').replace(/\s*EPP\s*$/i, '').replace(/[|&]/g, '').trim();
         break;
       }
     }
     
-    // Tentativa 2: Se não achou, procurar linha com número no início
     if (!codigo) {
       for (var i = 0; i < linhasApos.length; i++) {
         var linha = linhasApos[i];
@@ -958,29 +852,21 @@ function parseOCR(text) {
         if (mNum && linha.length > 5) {
           codigo = mNum[1];
           cliente = linha.replace(/^\d{2,5}\s+[-–—]?\s*/, '').trim();
-          cliente = cliente.replace(/\s*[-–]\s*LIDA?\s*$/i, '')
-                          .replace(/\s*LIDA?\s*$/i, '')
-                          .replace(/\s*LTDA\.?\s*$/i, '')
-                          .replace(/[|&]/g, '')
-                          .trim();
-          console.log('Cliente encontrado (padrão 2):', codigo, '-', cliente);
+          cliente = cliente.replace(/\s*[-–]\s*LIDA?\s*$/i, '').replace(/\s*LIDA?\s*$/i, '').replace(/\s*LTDA\.?\s*$/i, '').replace(/[|&]/g, '').trim();
           break;
         }
       }
     }
     
-    // Tentativa 3: Procurar por CNPJ e pegar linha anterior
     if (!codigo) {
       for (var i = 0; i < linhasApos.length; i++) {
         if (linhasApos[i].match(/CNPJ/i)) {
-          // Linha anterior deve ser o cliente
           if (i > 0) {
             var linhaAnt = linhasApos[i - 1];
             var mAnt = linhaAnt.match(/^(\d{2,5})\s*[-–—]?\s*(.+)/);
             if (mAnt) {
               codigo = mAnt[1];
               cliente = mAnt[2].trim().replace(/\s*LIDA?\s*$/i, '').replace(/\s*LTDA\.?\s*$/i, '').replace(/[|&]/g, '').trim();
-              console.log('Cliente encontrado (padrão 3):', codigo, '-', cliente);
             }
           }
           break;
@@ -989,55 +875,28 @@ function parseOCR(text) {
     }
   }
   
-  // ========== 4. ENDEREÇO ==========
-  // Procurar AVENIDA, RUA, etc
   var mEnd = t.match(/(?:AVENTIDA|AVENIDA|AVENI0A|AV\s|RUA|ALAMEDA|ESTRADA|TRAVESSA)\s+[A-Z0-9\s,]+?\d{3,}/);
   if (mEnd) {
     endereco = mEnd[0].trim().replace(/[|&]/g, '').trim();
-    console.log('Endereço base:', endereco);
-    
-    // Adicionar cidade/estado (procurar padrão "CIDADE - UF - (DD) NNNN-NNNN")
     var idxEnd = t.indexOf(mEnd[0]);
     var restoEnd = t.substring(idxEnd + mEnd[0].length, idxEnd + mEnd[0].length + 200);
     var mCid = restoEnd.match(/([A-ZÁÉÍÓÚÂÊÔÃÕÇ]{3,}(?:\s+[A-ZÁÉÍÓÚÂÊÔÃÕÇ]+)?)\s*[-–]\s*([A-Z]{2})\s*[-–]?\s*\(?\d{2}\)?\s*[\d\-]{7,}/);
     if (mCid) {
       var cidade = mCid[1].trim();
       var estado = mCid[2].trim();
-      // Validar: cidade deve ter pelo menos 3 caracteres e não conter palavras estranhas
       if (cidade.length >= 3 && !cidade.match(/PEDIDO|ABERTO|FISCAL|CUPOM/i)) {
         endereco = endereco + ' / ' + cidade + ' - ' + estado;
-        console.log('Cidade adicionada:', cidade, '-', estado);
       }
     }
-    
-    // Adicionar CEP
     var mCep = restoEnd.match(/CEP[:\s]*([0-9]{5}-?[0-9]{3})/);
     if (!mCep) mCep = t.match(/CEP[:\s]*([0-9]{5}-?[0-9]{3})/);
-    if (mCep) {
-      endereco += ' / CEP: ' + mCep[1];
-      console.log('CEP adicionado:', mCep[1]);
-    }
+    if (mCep) endereco += ' / CEP: ' + mCep[1];
   }
   
-  // ========== LIMPEZA FINAL ==========
   if (cliente) {
-    cliente = cliente.replace(/\s*LTDA\.?\s*$/i, '')
-                     .replace(/\s*LIDA\.?\s*$/i, '')
-                     .replace(/\s*ME\s*$/i, '')
-                     .replace(/\s*EPP\s*$/i, '')
-                     .replace(/[|&]/g, '')
-                     .replace(/\s+/g, ' ')
-                     .trim();
+    cliente = cliente.replace(/\s*LTDA\.?\s*$/i, '').replace(/\s*LIDA\.?\s*$/i, '').replace(/\s*ME\s*$/i, '').replace(/\s*EPP\s*$/i, '').replace(/[|&]/g, '').replace(/\s+/g, ' ').trim();
   }
   endereco = endereco.replace(/[|&]/g, '').replace(/\s+/g, ' ').trim();
-  
-  console.log('=== RESULTADO FINAL ===');
-  console.log('Número:', numero);
-  console.log('Data:', data);
-  console.log('Código:', codigo);
-  console.log('Cliente:', cliente);
-  console.log('Endereço:', endereco);
-  console.log('=== FIM DO PARSER ===');
   
   return { numero: numero, data: data, codigo: codigo, cliente: cliente, endereco: endereco };
 }
