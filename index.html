@@ -213,7 +213,7 @@ tr:hover { background: var(--surface-2); }
 
 <div id="loginScreen" class="login-wrap">
   <div class="login-box">
-    <h1>📦 Separação & Entrega</h1>
+    <h1> Separação & Entrega</h1>
     <p class="sub">Sistema de Controle de Pedidos</p>
     <div class="form-group"><label>Usuário</label><input type="text" id="loginUser" placeholder="Digite seu usuário"></div>
     <div class="form-group"><label>Senha</label><input type="password" id="loginPass" placeholder="Digite sua senha"></div>
@@ -246,7 +246,7 @@ tr:hover { background: var(--surface-2); }
 
 <script>
 /* ============ ESTADO ============ */
-const DB_KEY = 'sep_entrega_db_v15';
+const DB_KEY = 'sep_entrega_db_v17';
 let db = {
   users: [
     { id: 1, login: 'admin', pass: 'admin', nome: 'Administrador', funcao: 'admin', ativo: true },
@@ -274,7 +274,7 @@ let fotoAtual = null;
 let modoAtual = null;
 let isProcessing = false;
 
-// Funções globais
+// Expor funções globalmente
 window.doLogin = doLogin;
 window.doLogout = doLogout;
 window.toggleTheme = toggleTheme;
@@ -303,6 +303,7 @@ window.formUsuario = formUsuario;
 window.saveUsuario = saveUsuario;
 window.delUsuario = delUsuario;
 window.closeModal = closeModal;
+window.closeBarcodeScanner = closeBarcodeScanner;
 
 function loadDB() {
   const saved = localStorage.getItem(DB_KEY);
@@ -361,7 +362,6 @@ function doLogout() {
   }
   db.tracking = { active: false, entregadorId: null, currentPosition: null, lastUpdate: null };
   saveDB();
-  
   currentUser = null;
   sessionStorage.removeItem('currentUser');
   document.getElementById('appScreen').classList.add('hidden');
@@ -395,7 +395,7 @@ function buildNav() {
     { id: 'roteirizacao', icon: '🗺️', label: 'Roteirização' }
   ];
   if (currentUser.funcao === 'admin') {
-    items.push({ id: 'funcionarios', icon: '👥', label: 'Funcionários' });
+    items.push({ id: 'funcionarios', icon: '', label: 'Funcionários' });
     items.push({ id: 'usuarios', icon: '🔐', label: 'Usuários' });
     items.push({ id: 'relatorios', icon: '📄', label: 'Relatórios' });
   }
@@ -446,7 +446,7 @@ function renderDashboard() {
       '<div class="stat-card danger"><div class="label">Atrasados</div><div class="value">' + atrasados + '</div></div>' +
     '</div>' +
     '<div class="dashboard-grid">' +
-      '<div class="table-card"><h3 class="card-title">📋 Últimos Pedidos</h3><div class="table-wrap"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Status</th><th>Separador</th><th>Data</th></tr></thead><tbody>' +
+      '<div class="table-card"><h3 class="card-title"> Últimos Pedidos</h3><div class="table-wrap"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Status</th><th>Separador</th><th>Data</th></tr></thead><tbody>' +
         (db.pedidos.length ? db.pedidos.slice(-20).reverse().map(function(p) { return '<tr><td>' + p.numero + '</td><td>' + p.cliente + '</td><td><span class="badge badge-' + p.status.toLowerCase().replace('_','-') + '">' + p.status + '</span></td><td>' + (p.separador || '-') + '</td><td>' + formatDT(p.dataSeparacao) + '</td></tr>'; }).join('') : '<tr><td colspan="5" style="text-align:center; padding: 30px;">Nenhum pedido</td></tr>') +
       '</tbody></table></div></div>' +
       '<div><div class="chart-grid"><div class="chart-card"><h3>Separações por Dia</h3><canvas id="chartSep"></canvas></div><div class="chart-card"><h3>Entregas por Dia</h3><canvas id="chartEnt"></canvas></div></div></div>' +
@@ -513,7 +513,11 @@ function renderListaSelecao(pedidos) {
 
 function confirmarRetiradaPedidos() {
   var checkboxes = document.querySelectorAll('.chk-pedido:checked');
-  if (!checkboxes.length) { toast('Selecione pelo menos um pedido', 'warning'); return; }
+  if (!checkboxes.length) { 
+    toast('Selecione pelo menos um pedido', 'warning'); 
+    return; 
+  }
+  
   var count = 0;
   checkboxes.forEach(function(chk) {
     var p = db.pedidos.find(function(x) { return x.id === parseInt(chk.value); });
@@ -526,6 +530,7 @@ function confirmarRetiradaPedidos() {
       count++; 
     }
   });
+  
   saveDB(); 
   toast(count + ' pedido(s) retirado(s) com sucesso', 'success');
   
@@ -533,12 +538,14 @@ function confirmarRetiradaPedidos() {
     currentView = 'roteirizacao';
     buildNav();
     renderView();
-    if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
-  }, 500);
+    if (window.innerWidth <= 768) {
+      document.getElementById('sidebar').classList.remove('open');
+    }
+  }, 800);
 }
 
 function renderListaEntregas() {
-  var lista = db.pedidos.filter(function(p) { return p.status === 'EM_ENTREGA' && p.entregadorId === currentUser.id; });
+  var lista = db.pedidos.filter(function(p) { return p.status === 'EM_ENTREGA' && String(p.entregadorId) === String(currentUser.id); });
   var html = '<div class="table-wrap"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Endereço</th><th>Retirada</th><th>Status</th><th>Ações</th></tr></thead><tbody>' +
     (lista.length ? lista.map(function(p) { return '<tr><td>' + p.numero + '</td><td>' + p.cliente + '</td><td>' + (p.endereco || '-') + '</td><td>' + formatDT(p.dataRetirada) + '</td><td><span class="badge badge-em-entrega">EM ENTREGA</span></td><td><button class="btn btn-sm btn-success" onclick="marcarEntregue(' + p.id + ')">✓</button> <button class="btn btn-sm btn-danger" onclick="marcarProblema(' + p.id + ')">!</button></td></tr>'; }).join('') : '<tr><td colspan="6" style="text-align:center; padding: 30px;">Nenhum pedido em entrega</td></tr>') +
     '</tbody></table></div>';
@@ -568,106 +575,249 @@ function marcarProblema(id) {
   renderListaEntregas(); 
 }
 
+/* ============ ROTEIRIZAÇÃO ============ */
 function renderRoteirizacao() {
-  if (currentUser.funcao !== 'entregador' && currentUser.funcao !== 'admin') { navigate('dashboard'); return; }
+  if (currentUser.funcao !== 'entregador' && currentUser.funcao !== 'admin') { 
+    navigate('dashboard'); 
+    return; 
+  }
+  
   var c = document.getElementById('content');
   c.innerHTML = '<div class="card"><h3 class="card-title">🗺️ Roteirização de Entregas</h3><div id="map" class="map-container"></div><div id="routeInfo"></div><div id="trackingControls"></div></div>';
-  setTimeout(function() { initMap(); }, 200);
+  
+  setTimeout(function() { 
+    initMap(); 
+  }, 300);
 }
 
 function initMap() {
-  if (map) { map.remove(); map = null; }
+  if (map) { 
+    map.remove(); 
+    map = null; 
+  }
+  
+  var mapElement = document.getElementById('map');
+  if (!mapElement) {
+    console.error('Elemento #map não encontrado!');
+    return;
+  }
+  
   map = L.map('map').setView([-23.5505, -46.6333], 13);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+    attribution: '© OpenStreetMap contributors' 
+  }).addTo(map);
+  
+  console.log('Mapa inicializado');
   renderRouteInfo();
   renderTrackingControls();
 }
 
 async function renderRouteInfo() {
-  var pedidosEntrega = db.pedidos.filter(function(p) { return p.status === 'EM_ENTREGA' && p.entregadorId === currentUser.id; });
-  if (!pedidosEntrega.length) { document.getElementById('routeInfo').innerHTML = '<p style="color:var(--text-soft); text-align:center; padding:40px;">Nenhum pedido em entrega</p>'; return; }
+  console.log('=== RENDER ROUTE INFO ===');
+  console.log('currentUser:', currentUser);
+  console.log('Total de pedidos:', db.pedidos.length);
+  
+  var pedidosEntrega = db.pedidos.filter(function(p) { 
+    console.log('Pedido:', p.numero, 'Status:', p.status, 'EntregadorId:', p.entregadorId, 'CurrentId:', currentUser.id);
+    return p.status === 'EM_ENTREGA' && String(p.entregadorId) === String(currentUser.id); 
+  });
+  
+  console.log('Pedidos em entrega:', pedidosEntrega.length);
+  
+  if (!pedidosEntrega.length) { 
+    document.getElementById('routeInfo').innerHTML = '<p style="color:var(--text-soft); text-align:center; padding:40px;">Nenhum pedido em entrega</p>'; 
+    return; 
+  }
+  
   var geocodedPedidos = [];
   for (var i = 0; i < pedidosEntrega.length; i++) {
     var p = pedidosEntrega[i];
-    if (!p.latitude || !p.longitude) { var coords = await geocodeAddress(p.endereco); if (coords) { p.latitude = coords.lat; p.longitude = coords.lon; } }
-    if (p.latitude && p.longitude) { geocodedPedidos.push(p); }
+    if (!p.latitude || !p.longitude) { 
+      var coords = await geocodeAddress(p.endereco); 
+      if (coords) { 
+        p.latitude = coords.lat; 
+        p.longitude = coords.lon; 
+      } 
+    }
+    if (p.latitude && p.longitude) { 
+      geocodedPedidos.push(p); 
+    }
   }
-  if (!geocodedPedidos.length) { document.getElementById('routeInfo').innerHTML = '<p style="color:var(--text-soft); text-align:center;">Não foi possível geocodificar os endereços.</p>'; return; }
+  
+  if (!geocodedPedidos.length) { 
+    document.getElementById('routeInfo').innerHTML = '<p style="color:var(--text-soft); text-align:center;">Não foi possível geocodificar os endereços.</p>'; 
+    return; 
+  }
+  
   var optimizedRoute = optimizeRoute(geocodedPedidos);
+  
   var totalDistancia = 0;
-  for (var i = 0; i < optimizedRoute.length - 1; i++) { totalDistancia += calculateDistance(optimizedRoute[i].latitude, optimizedRoute[i].longitude, optimizedRoute[i+1].latitude, optimizedRoute[i+1].longitude); }
-  var html = '<div class="route-info"><div class="stat"><b>' + optimizedRoute.length + '</b> pedidos</div><div class="stat"><b>' + totalDistancia.toFixed(1) + '</b> km</div><div class="stat"><b>' + (optimizedRoute.length * 5 + totalDistancia * 2).toFixed(0) + '</b> min</div></div>';
+  for (var i = 0; i < optimizedRoute.length - 1; i++) { 
+    totalDistancia += calculateDistance(
+      optimizedRoute[i].latitude, 
+      optimizedRoute[i].longitude, 
+      optimizedRoute[i+1].latitude, 
+      optimizedRoute[i+1].longitude
+    ); 
+  }
+  
+  var html = '<div class="route-info">' +
+    '<div class="stat"><b>' + optimizedRoute.length + '</b> pedidos</div>' +
+    '<div class="stat"><b>' + totalDistancia.toFixed(1) + '</b> km</div>' +
+    '<div class="stat"><b>' + (optimizedRoute.length * 5 + totalDistancia * 2).toFixed(0) + '</b> min</div>' +
+  '</div>';
+  
   html += '<h4 style="margin-bottom:10px;">Rota Otimizada:</h4>';
-  optimizedRoute.forEach(function(p, idx) { html += '<div class="pedido-rota-item"><div class="numero">#' + (idx + 1) + ' - ' + p.numero + '</div><div class="info"><div><b>' + p.cliente + '</b></div><div class="cliente">' + p.endereco + '</div></div></div>'; });
+  optimizedRoute.forEach(function(p, idx) { 
+    html += '<div class="pedido-rota-item">' +
+      '<div class="numero">#' + (idx + 1) + ' - ' + p.numero + '</div>' +
+      '<div class="info">' +
+        '<div><b>' + p.cliente + '</b></div>' +
+        '<div class="cliente">' + p.endereco + '</div>' +
+      '</div></div>'; 
+  });
+  
   html += '<button class="btn btn-success btn-block" onclick="startTracking()" style="margin-top:15px;">🚀 Iniciar Rastreamento</button>';
+  
   document.getElementById('routeInfo').innerHTML = html;
   showRouteOnMap(optimizedRoute);
 }
 
 async function geocodeAddress(address) {
-  try { var response = await fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(address) + '&limit=1'); var data = await response.json(); if (data && data.length > 0) { return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) }; } } catch (e) { console.error('Erro geocodificação:', e); }
+  try { 
+    var response = await fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(address) + '&limit=1'); 
+    var data = await response.json(); 
+    if (data && data.length > 0) { 
+      return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) }; 
+    } 
+  } catch (e) { 
+    console.error('Erro geocodificação:', e); 
+  }
   return null;
 }
 
 function optimizeRoute(pedidos) {
   if (pedidos.length <= 1) return pedidos;
-  var optimized = [pedidos[0]]; var remaining = pedidos.slice(1);
+  var optimized = [pedidos[0]]; 
+  var remaining = pedidos.slice(1);
   while (remaining.length > 0) {
-    var last = optimized[optimized.length - 1]; var nearestIdx = 0; var nearestDist = Infinity;
-    for (var i = 0; i < remaining.length; i++) { var dist = calculateDistance(last.latitude, last.longitude, remaining[i].latitude, remaining[i].longitude); if (dist < nearestDist) { nearestDist = dist; nearestIdx = i; } }
-    optimized.push(remaining[nearestIdx]); remaining.splice(nearestIdx, 1);
+    var last = optimized[optimized.length - 1]; 
+    var nearestIdx = 0; 
+    var nearestDist = Infinity;
+    for (var i = 0; i < remaining.length; i++) { 
+      var dist = calculateDistance(last.latitude, last.longitude, remaining[i].latitude, remaining[i].longitude); 
+      if (dist < nearestDist) { 
+        nearestDist = dist; 
+        nearestIdx = i; 
+      } 
+    }
+    optimized.push(remaining[nearestIdx]); 
+    remaining.splice(nearestIdx, 1);
   }
   return optimized;
 }
 
 function calculateDistance(lat1, lon1, lat2, lon2) {
-  var R = 6371; var dLat = (lat2 - lat1) * Math.PI / 180; var dLon = (lon2 - lon1) * Math.PI / 180;
+  var R = 6371; 
+  var dLat = (lat2 - lat1) * Math.PI / 180; 
+  var dLon = (lon2 - lon1) * Math.PI / 180;
   var a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
 function showRouteOnMap(pedidos) {
-  routeMarkers.forEach(function(m) { map.removeLayer(m); }); routeMarkers = [];
+  routeMarkers.forEach(function(m) { map.removeLayer(m); }); 
+  routeMarkers = [];
   if (deliveryPolyline) map.removeLayer(deliveryPolyline);
   var latlngs = [];
-  pedidos.forEach(function(p, idx) { var marker = L.marker([p.latitude, p.longitude]).addTo(map).bindPopup('<b>Pedido ' + p.numero + '</b><br>' + p.cliente); routeMarkers.push(marker); latlngs.push([p.latitude, p.longitude]); });
-  if (latlngs.length > 1) { deliveryPolyline = L.polyline(latlngs, {color: '#2563eb', weight: 4, opacity: 0.7}).addTo(map); map.fitBounds(deliveryPolyline.getBounds(), {padding: [50, 50]}); }
-  else if (latlngs.length === 1) { map.setView(latlngs[0], 15); }
+  pedidos.forEach(function(p, idx) { 
+    var marker = L.marker([p.latitude, p.longitude]).addTo(map).bindPopup('<b>Pedido ' + p.numero + '</b><br>' + p.cliente); 
+    routeMarkers.push(marker); 
+    latlngs.push([p.latitude, p.longitude]); 
+  });
+  if (latlngs.length > 1) { 
+    deliveryPolyline = L.polyline(latlngs, {color: '#2563eb', weight: 4, opacity: 0.7}).addTo(map); 
+    map.fitBounds(deliveryPolyline.getBounds(), {padding: [50, 50]}); 
+  }
+  else if (latlngs.length === 1) { 
+    map.setView(latlngs[0], 15); 
+  }
 }
 
 function renderTrackingControls() {
-  var isTracking = db.tracking.active && db.tracking.entregadorId === currentUser.id;
+  var isTracking = db.tracking.active && String(db.tracking.entregadorId) === String(currentUser.id);
   var html = isTracking ? '<div class="tracking-status"><div class="tracking-dot"></div><div><b>Rastreamento Ativo</b><br>Atualizado: ' + (db.tracking.lastUpdate ? new Date(db.tracking.lastUpdate).toLocaleTimeString() : 'Agora') + '</div></div><button class="btn btn-danger btn-block" onclick="stopTracking()">⏹️ Parar Rastreamento</button>' : '<div class="tracking-status inactive"><div>Rastreamento inativo</div></div>';
   document.getElementById('trackingControls').innerHTML = html;
 }
 
 function startTracking() {
-  db.tracking.active = true; db.tracking.entregadorId = currentUser.id; db.tracking.lastUpdate = new Date().toISOString(); saveDB();
-  if (navigator.geolocation) { trackingInterval = setInterval(updateTrackingPosition, 5000); updateTrackingPosition(); toast('Rastreamento iniciado!', 'success'); renderTrackingControls(); }
-  else { toast('Geolocalização não suportada', 'error'); }
+  db.tracking.active = true; 
+  db.tracking.entregadorId = currentUser.id; 
+  db.tracking.lastUpdate = new Date().toISOString(); 
+  saveDB();
+  if (navigator.geolocation) { 
+    trackingInterval = setInterval(updateTrackingPosition, 5000); 
+    updateTrackingPosition(); 
+    toast('Rastreamento iniciado!', 'success'); 
+    renderTrackingControls(); 
+  }
+  else { 
+    toast('Geolocalização não suportada', 'error'); 
+  }
 }
 
 function stopTracking() {
-  db.tracking.active = false; db.tracking.entregadorId = null; db.tracking.currentPosition = null; saveDB();
-  if (trackingInterval) { clearInterval(trackingInterval); trackingInterval = null; }
-  if (map && userMarker) { map.removeLayer(userMarker); userMarker = null; }
-  toast('Rastreamento parado', 'warning'); renderTrackingControls();
+  db.tracking.active = false; 
+  db.tracking.entregadorId = null; 
+  db.tracking.currentPosition = null; 
+  saveDB();
+  if (trackingInterval) { 
+    clearInterval(trackingInterval); 
+    trackingInterval = null; 
+  }
+  if (map && userMarker) { 
+    map.removeLayer(userMarker); 
+    userMarker = null; 
+  }
+  toast('Rastreamento parado', 'warning'); 
+  renderTrackingControls();
 }
 
 function updateTrackingPosition() {
   if (!navigator.geolocation) return;
   navigator.geolocation.getCurrentPosition(function(position) {
-    var lat = position.coords.latitude; var lon = position.coords.longitude;
-    db.tracking.currentPosition = { lat: lat, lon: lon }; db.tracking.lastUpdate = new Date().toISOString(); saveDB();
+    var lat = position.coords.latitude; 
+    var lon = position.coords.longitude;
+    db.tracking.currentPosition = { lat: lat, lon: lon }; 
+    db.tracking.lastUpdate = new Date().toISOString(); 
+    saveDB();
     if (map) {
-      if (userMarker) { userMarker.setLatLng([lat, lon]); }
-      else { userMarker = L.marker([lat, lon], { icon: L.divIcon({ className: 'custom-div-icon', html: '<div style="background-color:#16a34a;width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);"></div>', iconSize: [20, 20], iconAnchor: [10, 10] }) }).addTo(map).bindPopup('📍 Sua posição'); }
+      if (userMarker) { 
+        userMarker.setLatLng([lat, lon]); 
+      }
+      else { 
+        userMarker = L.marker([lat, lon], { 
+          icon: L.divIcon({ 
+            className: 'custom-div-icon', 
+            html: '<div style="background-color:#16a34a;width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);"></div>', 
+            iconSize: [20, 20], 
+            iconAnchor: [10, 10] 
+          }) 
+        }).addTo(map).bindPopup('📍 Sua posição'); 
+      }
       map.setView([lat, lon], map.getZoom());
     }
     renderTrackingControls();
-  }, function(error) { console.error('Erro geolocalização:', error); }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+  }, function(error) { 
+    console.error('Erro geolocalização:', error); 
+  }, { 
+    enableHighAccuracy: true, 
+    timeout: 10000, 
+    maximumAge: 0 
+  });
 }
 
+/* ============ HISTÓRICO ============ */
 function renderHistorico() {
   var c = document.getElementById('content');
   c.innerHTML = '<div class="card"><h3 class="card-title">Histórico Completo</h3><div class="filters"><input type="text" id="fHistNum" placeholder="Nº Pedido" oninput="renderHistList()"><input type="text" id="fHistCli" placeholder="Cliente" oninput="renderHistList()"><input type="date" id="fHistIni" onchange="renderHistList()"><input type="date" id="fHistFim" onchange="renderHistList()"><select id="fHistStatus" onchange="renderHistList()"><option value="">Todos Status</option><option>SEPARADO</option><option>EM_ENTREGA</option><option>ENTREGUE</option><option>PROBLEMA</option></select></div><div id="histList"></div></div>';
@@ -688,7 +838,7 @@ function renderHistList() {
   if (st) lista = lista.filter(function(p) { return p.status === st; });
   lista.sort(function(a, b) { return (b.dataSeparacao || '').localeCompare(a.dataSeparacao || ''); });
   var html = '<div class="table-wrap"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Endereço</th><th>Separador</th><th>Entregador</th><th>Status</th><th>Ações</th></tr></thead><tbody>' +
-    (lista.length ? lista.map(function(p) { return '<tr><td>' + p.numero + '</td><td>' + p.cliente + '</td><td>' + (p.endereco || '-') + '</td><td>' + (p.separador || '-') + '</td><td>' + (p.entregador || '-') + '</td><td><span class="badge badge-' + p.status.toLowerCase().replace('_','-') + '">' + p.status + '</span></td><td><button class="btn btn-sm" onclick="verDetalhes(' + p.id + ')">👁</button> <button class="btn btn-sm" onclick="verFotos(' + p.id + ')">📷</button></td></tr>'; }).join('') : '<tr><td colspan="7" style="text-align:center; padding: 30px;">Nenhum pedido encontrado</td></tr>') +
+    (lista.length ? lista.map(function(p) { return '<tr><td>' + p.numero + '</td><td>' + p.cliente + '</td><td>' + (p.endereco || '-') + '</td><td>' + (p.separador || '-') + '</td><td>' + (p.entregador || '-') + '</td><td><span class="badge badge-' + p.status.toLowerCase().replace('_','-') + '">' + p.status + '</span></td><td><button class="btn btn-sm" onclick="verDetalhes(' + p.id + ')">👁</button> <button class="btn btn-sm" onclick="verFotos(' + p.id + ')"></button></td></tr>'; }).join('') : '<tr><td colspan="7" style="text-align:center; padding: 30px;">Nenhum pedido encontrado</td></tr>') +
     '</tbody></table></div>';
   document.getElementById('histList').innerHTML = html;
 }
@@ -703,6 +853,7 @@ function verFotos(id) {
   showModal('<h2>Fotos do Pedido ' + p.numero + '</h2>' + (p.fotoSeparacao ? '<h4 style="margin-top:10px;">Foto da Separação</h4><img src="' + p.fotoSeparacao + '" style="width:100%; border-radius:8px; margin-top:5px;">' : '') + (p.fotoRetirada ? '<h4 style="margin-top:15px;">Foto da Retirada</h4><img src="' + p.fotoRetirada + '" style="width:100%; border-radius:8px; margin-top:5px;">' : '') + (!p.fotoSeparacao && !p.fotoRetirada ? '<p>Sem fotos registradas</p>' : '') + '<div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Fechar</button></div>');
 }
 
+/* ============ FUNCIONÁRIOS ============ */
 function renderFuncionarios() {
   if (currentUser.funcao !== 'admin') { navigate('dashboard'); return; }
   var c = document.getElementById('content');
@@ -725,11 +876,12 @@ function saveFuncionario(id) {
 
 function delFuncionario(id) { if (!confirm('Excluir funcionário?')) return; db.funcionarios = db.funcionarios.filter(function(x) { return x.id !== id; }); saveDB(); renderFuncionarios(); toast('Funcionário excluído', 'success'); }
 
+/* ============ USUÁRIOS ============ */
 function renderUsuarios() {
   if (currentUser.funcao !== 'admin') { navigate('dashboard'); return; }
   var c = document.getElementById('content');
   c.innerHTML = '<div class="card"><h3 class="card-title">Usuários do Sistema</h3><button class="btn" onclick="formUsuario()">+ Novo Usuário</button><div class="table-wrap" style="margin-top:15px;"><table><thead><tr><th>Login</th><th>Nome</th><th>Função</th><th>Status</th><th>Ações</th></tr></thead><tbody>' +
-    db.users.map(function(u) { return '<tr><td>' + u.login + '</td><td>' + u.nome + '</td><td>' + u.funcao + '</td><td><span class="badge ' + (u.ativo ? 'badge-entregue' : 'badge-problema') + '">' + (u.ativo ? 'ATIVO' : 'INATIVO') + '</span></td><td><button class="btn btn-sm" onclick="formUsuario(' + u.id + ')">✏</button>' + (u.id !== currentUser.id ? ' <button class="btn btn-sm btn-danger" onclick="delUsuario(' + u.id + ')"></button>' : '') + '</td></tr>'; }).join('') +
+    db.users.map(function(u) { return '<tr><td>' + u.login + '</td><td>' + u.nome + '</td><td>' + u.funcao + '</td><td><span class="badge ' + (u.ativo ? 'badge-entregue' : 'badge-problema') + '">' + (u.ativo ? 'ATIVO' : 'INATIVO') + '</span></td><td><button class="btn btn-sm" onclick="formUsuario(' + u.id + ')">✏</button>' + (u.id !== currentUser.id ? ' <button class="btn btn-sm btn-danger" onclick="delUsuario(' + u.id + ')">🗑</button>' : '') + '</td></tr>'; }).join('') +
     '</tbody></table></div></div>';
 }
 
@@ -747,10 +899,11 @@ function saveUsuario(id) {
 
 function delUsuario(id) { if (!confirm('Excluir usuário?')) return; db.users = db.users.filter(function(x) { return x.id !== id; }); saveDB(); renderUsuarios(); toast('Usuário excluído', 'success'); }
 
+/* ============ RELATÓRIOS ============ */
 function renderRelatorios() {
   if (currentUser.funcao !== 'admin') { navigate('dashboard'); return; }
   var c = document.getElementById('content');
-  c.innerHTML = '<div class="card"><h3 class="card-title">Filtros do Relatório</h3><div class="filters"><input type="date" id="rIni"><input type="date" id="rFim"><input type="text" id="rCli" placeholder="Cliente"><input type="text" id="rPed" placeholder="Nº Pedido"><input type="text" id="rEnt" placeholder="Entregador"><input type="text" id="rSep" placeholder="Separador"></div><button class="btn" onclick="exportExcel()">📊 Exportar Excel</button> <button class="btn btn-danger" onclick="exportPDF()">📄 Exportar PDF</button></div><div class="card"><h3 class="card-title">Prévia</h3><div id="relPrev"></div></div>';
+  c.innerHTML = '<div class="card"><h3 class="card-title">Filtros do Relatório</h3><div class="filters"><input type="date" id="rIni"><input type="date" id="rFim"><input type="text" id="rCli" placeholder="Cliente"><input type="text" id="rPed" placeholder="Nº Pedido"><input type="text" id="rEnt" placeholder="Entregador"><input type="text" id="rSep" placeholder="Separador"></div><button class="btn" onclick="exportExcel()">📊 Exportar Excel</button> <button class="btn btn-danger" onclick="exportPDF()"> Exportar PDF</button></div><div class="card"><h3 class="card-title">Prévia</h3><div id="relPrev"></div></div>';
   updateRelPrev();
   ['rIni','rFim','rCli','rPed','rEnt','rSep'].forEach(function(id) { var el = document.getElementById(id); if (el) { el.addEventListener('input', updateRelPrev); el.addEventListener('change', updateRelPrev); } });
 }
@@ -793,6 +946,7 @@ function exportPDF() {
   doc.save('relatorio_' + new Date().toISOString().split('T')[0] + '.pdf'); toast('PDF exportado', 'success');
 }
 
+/* ============ BUSCA CEP ============ */
 async function buscarCep() {
   var cepInput = document.getElementById('clienteCep');
   if (!cepInput) return;
@@ -908,7 +1062,7 @@ function cadastrarClienteEPedido() {
   }
   
   if (camposFaltando.length > 0) {
-    alert('⚠️ Preencha os campos:\n\n• ' + camposFaltando.join('\n• '));
+    alert('️ Preencha os campos:\n\n• ' + camposFaltando.join('\n• '));
     toast('Preencha: ' + camposFaltando.join(', '), 'error');
     isProcessing = false;
     return;
@@ -1032,10 +1186,11 @@ function confirmarPedidoCadastrado(modo, foto) {
   renderSeparacao();
 }
 
+/* ============ CÂMERA ============ */
 async function openCamera(modo) {
   if (isProcessing) return;
   if (typeof Tesseract === 'undefined') {
-    showModal('<h2>⚠️ OCR Não Disponível</h2><p style="margin-bottom:15px; font-size:14px;">A biblioteca de reconhecimento de texto não foi carregada.</p><button class="btn btn-block" onclick="closeModal(); entradaManual(\'' + modo + '\')">✏️ Inserir Dados Manualmente</button><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Fechar</button></div>');
+    showModal('<h2>⚠️ OCR Não Disponível</h2><p style="margin-bottom:15px; font-size:14px;">A biblioteca de reconhecimento de texto não foi carregada.</p><button class="btn btn-block" onclick="closeModal(); entradaManual(\'' + modo + '\')">️ Inserir Dados Manualmente</button><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Fechar</button></div>');
     return;
   }
   currentCameraModo = modo;
@@ -1124,7 +1279,7 @@ async function capturePhoto(modo) {
         '<div class="form-group"><label>Código do Cliente <span class="required">*</span></label><input id="ocrCod" value="' + dados.codigo + '"></div>' +
         '<div class="form-group"><label>Apelido <span class="required">*</span> <small style="color:var(--text-soft); font-weight:600;">(nome resumido)</small></label><input id="clienteApelido" placeholder="Ex: Munhoz"></div>' +
         '<div class="form-group"><label>Nome Completo <small style="color:var(--text-soft); font-weight:600;">(opcional)</small></label><input id="clienteNome" placeholder="Razão social"></div>' +
-        '<div class="endereco-section"><h4>📍 Endereço</h4>' +
+        '<div class="endereco-section"><h4> Endereço</h4>' +
           '<div class="form-group"><label>CEP</label><div class="cep-group"><input id="clienteCep" placeholder="00000-000" maxlength="9" oninput="formatarCep(this)"><button class="btn btn-sm" onclick="buscarCep()">🔍</button></div><div id="cepStatus" class="cep-status"></div></div>' +
           '<div class="form-group"><label>Rua <span class="required">*</span></label><input id="clienteRua" placeholder="Preenchido pelo CEP"></div>' +
           '<div class="endereco-row"><div class="form-group"><label>Número <span class="required">*</span></label><input id="clienteNumero" placeholder="Nº"></div><div class="form-group"><label>Complemento</label><input id="clienteComplemento" placeholder="Sala, Apto..."></div></div>' +
@@ -1211,46 +1366,72 @@ function entradaManual(modo) {
   showModal('<h2>Inserir Manualmente</h2><div class="form-group"><label>Nº do Pedido <span class="required">*</span></label><input id="ocrNum"></div><div class="form-group"><label>Código <span class="required">*</span></label><input id="ocrCod"></div><div class="form-group"><label>Apelido <span class="required">*</span></label><input id="clienteApelido"></div><div class="form-group"><label>Nome Completo</label><input id="clienteNome"></div><div class="endereco-section"><h4>📍 Endereço</h4><div class="form-group"><label>CEP</label><div class="cep-group"><input id="clienteCep" maxlength="9" oninput="formatarCep(this)"><button class="btn btn-sm" onclick="buscarCep()">🔍</button></div><div id="cepStatus" class="cep-status"></div></div><div class="form-group"><label>Rua <span class="required">*</span></label><input id="clienteRua"></div><div class="endereco-row"><div class="form-group"><label>Número <span class="required">*</span></label><input id="clienteNumero"></div><div class="form-group"><label>Complemento</label><input id="clienteComplemento"></div></div><div class="form-group"><label>Bairro <span class="required">*</span></label><input id="clienteBairro"></div><div class="form-group"><label>Cidade - UF <span class="required">*</span></label><input id="clienteCidade"></div></div><div class="form-group"><label>CNPJ</label><input id="clienteCnpj"></div><div class="form-group"><label>Telefone</label><input id="clienteTelefone"></div><p style="font-size:12px; color:var(--text-soft); margin-bottom:15px;"><span class="required">*</span> = obrigatórios</p><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-success" onclick="cadastrarClienteEPedido()">✓ Confirmar</button></div>');
 }
 
+/* ============ PARSER OCR - AJUSTADO ============ */
 function parseOCR(text) {
   var linhas = text.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
   var t = text.toUpperCase();
   var numero = '', data = '', codigo = '', cliente = '', endereco = '';
   
-  var mPedido = t.match(/(?:ABERIO|ABERTO|ABERT0|PEDIDO)\s*[-–]?\s*N[O0º°]?\s*([0-9]+)/);
-  if (mPedido) { numero = mPedido[1].replace(/[^0-9]/g, ''); if (numero.length > 8) numero = numero.slice(-8); }
-  if (!numero) { var mNum = t.match(/N[O0º°]\s*([0-9]{6,})/); if (mNum) { numero = mNum[1].replace(/[^0-9]/g, ''); if (numero.length > 8) numero = numero.slice(-8); } }
+  console.log('=== INÍCIO DO PARSER OCR ===');
+  console.log('Texto completo:', text);
   
-  var mData = t.match(/(\d{2}\/\d{2}\/\d{4})/);
-  if (mData) data = mData[1];
-  
-  var idxCupom = t.indexOf('CUPOM SEM VALOR FISCAL'); if (idxCupom < 0) idxCupom = t.indexOf('GUPOM');
-  if (idxCupom >= 0) { 
-    var textoApos = text.substring(idxCupom);
-    var linhasApos = textoApos.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0 && l.length < 150; });
-    for (var i = 0; i < linhasApos.length; i++) {
-      var linha = linhasApos[i];
-      var mCliente = linha.match(/^(\d{2,5})\s*[-–—]\s*(.+?)(?:\s*[-–]\s*LIDA?\s*$|\s*LIDA?\s*$|\s*ME\s*$|\s*EPP\s*$|$)/i);
-      if (mCliente) {
-        codigo = mCliente[1];
-        cliente = mCliente[2].trim();
-        cliente = cliente.replace(/\s*[-–]\s*LIDA?\s*$/i, '').replace(/\s*LIDA?\s*$/i, '').replace(/\s*LTDA\.?\s*$/i, '').replace(/\s*ME\s*$/i, '').replace(/\s*EPP\s*$/i, '').replace(/[|&]/g, '').trim();
-        break;
+  // 1. NÚMERO DO PEDIDO - Busca exata abaixo de "PEDIDO"
+  var idxPedido = t.indexOf('PEDIDO');
+  if (idxPedido >= 0) {
+    var textoAposPedido = text.substring(idxPedido);
+    var linhasAposPedido = textoAposPedido.split('\n').map(function(l) { return l.trim(); });
+    
+    if (linhasAposPedido.length > 1) {
+      var linhaNumero = linhasAposPedido[1];
+      console.log('Linha do número:', linhaNumero);
+      
+      var mNumero = linhaNumero.match(/N[O0º°]\s*([0-9]+)/i);
+      if (mNumero) {
+        numero = mNumero[1].replace(/[^0-9]/g, '');
+        if (numero.length > 8) numero = numero.slice(-8);
+        console.log('Número do pedido encontrado:', numero);
       }
+      
+      var mData = linhaNumero.match(/(\d{2}\/\d{2}\/\d{4})/);
+      if (mData) data = mData[1];
     }
-    if (!codigo) {
-      for (var i = 0; i < linhasApos.length; i++) {
-        var linha = linhasApos[i];
-        var mNum = linha.match(/^(\d{2,5})\s+/);
-        if (mNum && linha.length > 5) {
-          codigo = mNum[1];
-          cliente = linha.replace(/^\d{2,5}\s+[-–—]?\s*/, '').trim();
-          cliente = cliente.replace(/\s*[-–]\s*LIDA?\s*$/i, '').replace(/\s*LIDA?\s*$/i, '').replace(/\s*LTDA\.?\s*$/i, '').replace(/[|&]/g, '').trim();
-          break;
+  }
+  
+  // 2. CÓDIGO E CLIENTE - Busca abaixo de "CUPOM SEM VALOR FISCAL"
+  var idxCupom = t.indexOf('CUPOM SEM VALOR FISCAL');
+  if (idxCupom < 0) idxCupom = t.indexOf('GUPOM SEM VALOR FISCAL');
+  
+  if (idxCupom >= 0) {
+    var textoAposCupom = text.substring(idxCupom);
+    var linhasAposCupom = textoAposCupom.split('\n').map(function(l) { return l.trim(); });
+    
+    console.log('Linhas após CUPOM:', linhasAposCupom);
+    
+    if (linhasAposCupom.length > 1) {
+      var linhaCliente = linhasAposCupom[1];
+      console.log('Linha do cliente:', linhaCliente);
+      
+      var mCodigo = linhaCliente.match(/^(\d{2,5})\s*[-–—]/);
+      if (mCodigo) {
+        codigo = mCodigo[1];
+        console.log('Código do cliente encontrado:', codigo);
+        
+        var partes = linhaCliente.split(/[-–—]/);
+        if (partes.length > 1) {
+          cliente = partes[1].trim();
+          cliente = cliente.replace(/\s*LTDA\.?\s*$/i, '')
+                          .replace(/\s*LIDA\.?\s*$/i, '')
+                          .replace(/\s*ME\s*$/i, '')
+                          .replace(/\s*EPP\s*$/i, '')
+                          .replace(/[|&]/g, '')
+                          .trim();
+          console.log('Nome do cliente:', cliente);
         }
       }
     }
   }
   
+  // 3. ENDEREÇO
   var mEnd = t.match(/(?:AVENTIDA|AVENIDA|AVENI0A|AV\s|RUA|ALAMEDA|ESTRADA|TRAVESSA)\s+[A-Z0-9\s,]+?\d{3,}/);
   if (mEnd) {
     endereco = mEnd[0].trim().replace(/[|&]/g, '').trim();
@@ -1274,9 +1455,18 @@ function parseOCR(text) {
   }
   endereco = endereco.replace(/[|&]/g, '').replace(/\s+/g, ' ').trim();
   
+  console.log('=== RESULTADO FINAL ===');
+  console.log('Número:', numero);
+  console.log('Data:', data);
+  console.log('Código:', codigo);
+  console.log('Cliente:', cliente);
+  console.log('Endereço:', endereco);
+  console.log('=== FIM DO PARSER ===');
+  
   return { numero: numero, data: data, codigo: codigo, cliente: cliente, endereco: endereco };
 }
 
+/* ============ MODAL ============ */
 function showModal(html) { 
   document.getElementById('modalContainer').innerHTML = '<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal">' + html + '</div></div>'; 
 }
@@ -1287,9 +1477,17 @@ function closeModal() {
   isProcessing = false; 
 }
 
-function formatDT(iso) { if (!iso) return '-'; var d = new Date(iso); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
+function formatDT(iso) { 
+  if (!iso) return '-'; 
+  var d = new Date(iso); 
+  return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); 
+}
 
-function initApp() { currentView = 'dashboard'; buildNav(); renderView(); }
+function initApp() { 
+  currentView = 'dashboard'; 
+  buildNav(); 
+  renderView(); 
+}
 
 // Inicialização
 loadTheme(); 
