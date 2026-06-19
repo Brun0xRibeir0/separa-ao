@@ -64,13 +64,25 @@ button, input, select, textarea {
 
 .form-group { margin-bottom: 15px; }
 .form-group label { display: block; margin-bottom: 6px; font-weight: 800; color: var(--text); font-size: 14px; }
+.form-group label .required { color: var(--danger); margin-left: 3px; }
 .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px 14px; border: 2px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font-weight: 700; transition: border 0.2s; font-size: 16px; }
 .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--primary); }
-.form-group input:read-only { background: var(--surface-2); color: var(--text-soft); cursor: not-allowed; }
+.form-group input.error { border-color: var(--danger); background: #fef2f2; }
+.form-group input[readonly] { background: var(--surface-2); opacity: 0.8; }
 
-.cep-row { display: flex; gap: 8px; align-items: flex-end; }
-.cep-row .form-group { flex: 1; margin-bottom: 0; }
-.cep-row .btn { margin-bottom: 0; padding: 12px 16px; }
+.cep-group { display: flex; gap: 10px; }
+.cep-group input { flex: 1; }
+.cep-group .btn { flex-shrink: 0; padding: 12px 16px; min-height: 48px; }
+
+.endereco-section { background: var(--surface-2); border-radius: 8px; padding: 15px; margin-bottom: 15px; }
+.endereco-section h4 { font-size: 15px; margin-bottom: 12px; color: var(--primary); }
+.endereco-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cep-status { font-size: 12px; font-weight: 700; margin-top: 4px; min-height: 18px; }
+.cep-status.success { color: var(--success); }
+.cep-status.error { color: var(--danger); }
+.cep-status.loading { color: var(--primary); }
+
+@media (max-width: 480px) { .endereco-row { grid-template-columns: 1fr; } }
 
 .btn { display: inline-block; padding: 14px 20px; border: none; border-radius: 8px; background: var(--primary); color: #fff; font-weight: 800; cursor: pointer; text-align: center; transition: all 0.2s; font-size: 16px; min-height: 48px; text-decoration: none; }
 .btn:hover { background: var(--primary-dark); transform: translateY(-1px); }
@@ -172,18 +184,10 @@ tr:hover { background: var(--surface-2); }
 .pedido-rota-item .numero { font-weight: 800; color: var(--primary); margin-right: 15px; min-width: 80px; }
 .pedido-rota-item .info { flex: 1; }
 .pedido-rota-item .cliente { font-size: 14px; color: var(--text-soft); }
-.pedido-rota-item .distancia { font-size: 12px; color: var(--text-soft); margin-left: 10px; }
 .tracking-status { display: flex; align-items: center; gap: 10px; padding: 12px; background: var(--success); color: white; border-radius: 8px; margin-bottom: 15px; }
 .tracking-status.inactive { background: var(--text-soft); }
 .tracking-dot { width: 12px; height: 12px; background: white; border-radius: 50%; animation: pulse 2s infinite; }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-
-.cep-status { font-size: 12px; margin-top: 6px; padding: 6px 10px; border-radius: 6px; display: none; }
-.cep-status.loading { display: block; background: #dbeafe; color: #1e40af; }
-.cep-status.success { display: block; background: #d1fae5; color: #065f46; }
-.cep-status.error { display: block; background: #fee2e2; color: #991b1b; }
-
-.section-divider { font-size: 13px; color: var(--primary); font-weight: 800; text-transform: uppercase; margin: 15px 0 10px 0; padding-bottom: 6px; border-bottom: 2px solid var(--border); }
 
 .toast-container { position: fixed; top: 20px; right: 20px; z-index: 2000; }
 .toast { background: var(--surface); padding: 15px 20px; border-radius: 8px; box-shadow: var(--shadow); margin-bottom: 10px; border-left: 4px solid var(--primary); min-width: 250px; font-weight: 700; animation: slideIn 0.3s; font-size: 14px; }
@@ -236,7 +240,7 @@ tr:hover { background: var(--surface-2); }
 
 <script>
 /* ============ ESTADO ============ */
-const DB_KEY = 'sep_entrega_db_v11';
+const DB_KEY = 'sep_entrega_db_v12';
 let db = {
   users: [
     { id: 1, login: 'admin', pass: 'admin', nome: 'Administrador', funcao: 'admin', ativo: true },
@@ -260,6 +264,8 @@ let routeMarkers = [];
 let deliveryPolyline = null;
 let trackingInterval = null;
 let userMarker = null;
+let fotoAtual = null;
+let modoAtual = null;
 
 function loadDB() {
   const saved = localStorage.getItem(DB_KEY);
@@ -274,7 +280,7 @@ function toast(msg, type = 'info') {
   t.className = 'toast ' + type;
   t.textContent = msg;
   document.getElementById('toastContainer').appendChild(t);
-  setTimeout(() => t.remove(), 3500);
+  setTimeout(() => t.remove(), 4000);
 }
 
 function doLogin() {
@@ -364,7 +370,7 @@ function renderDashboard() {
       '<div class="stat-card danger"><div class="label">Atrasados</div><div class="value">' + atrasados + '</div></div>' +
     '</div>' +
     '<div class="dashboard-grid">' +
-      '<div class="table-card"><h3 class="card-title">📋 Últimos Pedidos</h3><div class="table-wrap"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Status</th><th>Separador</th><th>Data</th></tr></thead><tbody>' +
+      '<div class="table-card"><h3 class="card-title"> Últimos Pedidos</h3><div class="table-wrap"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Status</th><th>Separador</th><th>Data</th></tr></thead><tbody>' +
         (db.pedidos.length ? db.pedidos.slice(-20).reverse().map(function(p) { return '<tr><td>' + p.numero + '</td><td>' + p.cliente + '</td><td><span class="badge badge-' + p.status.toLowerCase().replace('_','-') + '">' + p.status + '</span></td><td>' + (p.separador || '-') + '</td><td>' + formatDT(p.dataSeparacao) + '</td></tr>'; }).join('') : '<tr><td colspan="5" style="text-align:center; padding: 30px;">Nenhum pedido</td></tr>') +
       '</tbody></table></div></div>' +
       '<div><div class="chart-grid"><div class="chart-card"><h3>Separações por Dia</h3><canvas id="chartSep"></canvas></div><div class="chart-card"><h3>Entregas por Dia</h3><canvas id="chartEnt"></canvas></div></div></div>' +
@@ -448,189 +454,127 @@ function renderListaEntregas() {
 function marcarEntregue(id) { var p = db.pedidos.find(function(x) { return x.id === id; }); if (!p) return; p.status = 'ENTREGUE'; p.dataEntrega = new Date().toISOString(); saveDB(); toast('Pedido marcado como ENTREGUE', 'success'); renderListaEntregas(); }
 function marcarProblema(id) { var p = db.pedidos.find(function(x) { return x.id === id; }); if (!p) return; var motivo = prompt('Descreva o problema na entrega:'); if (!motivo) return; p.status = 'PROBLEMA'; p.motivoProblema = motivo; p.dataProblema = new Date().toISOString(); saveDB(); toast('Problema registrado', 'warning'); renderListaEntregas(); }
 
-/* ============ ROTEIRIZAÇÃO COM MAPA ============ */
+/* ============ ROTEIRIZAÇÃO ============ */
 function renderRoteirizacao() {
   if (currentUser.funcao !== 'entregador' && currentUser.funcao !== 'admin') { navigate('dashboard'); return; }
   var c = document.getElementById('content');
-  c.innerHTML = 
-    '<div class="card">' +
-      '<h3 class="card-title">🗺️ Roteirização de Entregas</h3>' +
-      '<div id="map" class="map-container"></div>' +
-      '<div id="routeInfo"></div>' +
-      '<div id="trackingControls"></div>' +
-    '</div>';
+  c.innerHTML = '<div class="card"><h3 class="card-title">🗺️ Roteirização de Entregas</h3><div id="map" class="map-container"></div><div id="routeInfo"></div><div id="trackingControls"></div></div>';
   setTimeout(function() { initMap(); }, 100);
 }
-
 function initMap() {
   map = L.map('map').setView([-23.5505, -46.6333], 13);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors'
-  }).addTo(map);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
   renderRouteInfo();
   renderTrackingControls();
 }
-
 async function renderRouteInfo() {
-  var pedidosEntrega = db.pedidos.filter(function(p) { 
-    return p.status === 'EM_ENTREGA' && p.entregadorId === currentUser.id; 
-  });
-  if (!pedidosEntrega.length) {
-    document.getElementById('routeInfo').innerHTML = '<p style="color:var(--text-soft); text-align:center; padding:40px;">Nenhum pedido em entrega</p>';
-    return;
-  }
+  var pedidosEntrega = db.pedidos.filter(function(p) { return p.status === 'EM_ENTREGA' && p.entregadorId === currentUser.id; });
+  if (!pedidosEntrega.length) { document.getElementById('routeInfo').innerHTML = '<p style="color:var(--text-soft); text-align:center; padding:40px;">Nenhum pedido em entrega</p>'; return; }
   var geocodedPedidos = [];
   for (var i = 0; i < pedidosEntrega.length; i++) {
     var p = pedidosEntrega[i];
-    if (!p.latitude || !p.longitude) {
-      var coords = await geocodeAddress(p.endereco);
-      if (coords) { p.latitude = coords.lat; p.longitude = coords.lon; saveDB(); }
-    }
-    if (p.latitude && p.longitude) geocodedPedidos.push(p);
+    if (!p.latitude || !p.longitude) { var coords = await geocodeAddress(p.endereco); if (coords) { p.latitude = coords.lat; p.longitude = coords.lon; } }
+    if (p.latitude && p.longitude) { geocodedPedidos.push(p); }
   }
-  if (!geocodedPedidos.length) {
-    document.getElementById('routeInfo').innerHTML = '<p style="color:var(--text-soft); text-align:center;">Não foi possível geocodificar os endereços. Verifique se os endereços estão completos.</p>';
-    return;
-  }
+  if (!geocodedPedidos.length) { document.getElementById('routeInfo').innerHTML = '<p style="color:var(--text-soft); text-align:center;">Não foi possível geocodificar os endereços.</p>'; return; }
   var optimizedRoute = optimizeRoute(geocodedPedidos);
   var totalDistancia = 0;
-  for (var i = 0; i < optimizedRoute.length - 1; i++) {
-    totalDistancia += calculateDistance(optimizedRoute[i].latitude, optimizedRoute[i].longitude, optimizedRoute[i+1].latitude, optimizedRoute[i+1].longitude);
-  }
-  var html = '<div class="route-info">' +
-    '<div class="stat"><b>' + optimizedRoute.length + '</b> pedidos</div>' +
-    '<div class="stat"><b>' + totalDistancia.toFixed(1) + '</b> km totais</div>' +
-    '<div class="stat"><b>' + (optimizedRoute.length * 5 + totalDistancia * 2).toFixed(0) + '</b> min estimadas</div>' +
-  '</div>';
+  for (var i = 0; i < optimizedRoute.length - 1; i++) { totalDistancia += calculateDistance(optimizedRoute[i].latitude, optimizedRoute[i].longitude, optimizedRoute[i+1].latitude, optimizedRoute[i+1].longitude); }
+  var html = '<div class="route-info"><div class="stat"><b>' + optimizedRoute.length + '</b> pedidos</div><div class="stat"><b>' + totalDistancia.toFixed(1) + '</b> km</div><div class="stat"><b>' + (optimizedRoute.length * 5 + totalDistancia * 2).toFixed(0) + '</b> min</div></div>';
   html += '<h4 style="margin-bottom:10px;">Rota Otimizada:</h4>';
-  optimizedRoute.forEach(function(p, idx) {
-    html += '<div class="pedido-rota-item">' +
-      '<div class="numero">#' + (idx + 1) + ' - ' + p.numero + '</div>' +
-      '<div class="info"><div><b>' + p.cliente + '</b></div><div class="cliente">' + p.endereco + '</div></div>' +
-    '</div>';
-  });
+  optimizedRoute.forEach(function(p, idx) { html += '<div class="pedido-rota-item"><div class="numero">#' + (idx + 1) + ' - ' + p.numero + '</div><div class="info"><div><b>' + p.cliente + '</b></div><div class="cliente">' + p.endereco + '</div></div></div>'; });
   html += '<button class="btn btn-success btn-block" onclick="startTracking()" style="margin-top:15px;">🚀 Iniciar Rastreamento</button>';
   document.getElementById('routeInfo').innerHTML = html;
   showRouteOnMap(optimizedRoute);
 }
-
 async function geocodeAddress(address) {
-  try {
-    var response = await fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(address) + '&limit=1');
-    var data = await response.json();
-    if (data && data.length > 0) return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
-  } catch (e) { console.error('Erro geocodificação:', e); }
+  try { var response = await fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(address) + '&limit=1'); var data = await response.json(); if (data && data.length > 0) { return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) }; } } catch (e) { console.error('Erro geocodificação:', e); }
   return null;
 }
-
 function optimizeRoute(pedidos) {
   if (pedidos.length <= 1) return pedidos;
-  var optimized = [pedidos[0]];
-  var remaining = pedidos.slice(1);
+  var optimized = [pedidos[0]]; var remaining = pedidos.slice(1);
   while (remaining.length > 0) {
-    var last = optimized[optimized.length - 1];
-    var nearestIdx = 0;
-    var nearestDist = Infinity;
-    for (var i = 0; i < remaining.length; i++) {
-      var dist = calculateDistance(last.latitude, last.longitude, remaining[i].latitude, remaining[i].longitude);
-      if (dist < nearestDist) { nearestDist = dist; nearestIdx = i; }
-    }
-    optimized.push(remaining[nearestIdx]);
-    remaining.splice(nearestIdx, 1);
+    var last = optimized[optimized.length - 1]; var nearestIdx = 0; var nearestDist = Infinity;
+    for (var i = 0; i < remaining.length; i++) { var dist = calculateDistance(last.latitude, last.longitude, remaining[i].latitude, remaining[i].longitude); if (dist < nearestDist) { nearestDist = dist; nearestIdx = i; } }
+    optimized.push(remaining[nearestIdx]); remaining.splice(nearestIdx, 1);
   }
   return optimized;
 }
-
 function calculateDistance(lat1, lon1, lat2, lon2) {
-  var R = 6371;
-  var dLat = (lat2 - lat1) * Math.PI / 180;
-  var dLon = (lon2 - lon1) * Math.PI / 180;
+  var R = 6371; var dLat = (lat2 - lat1) * Math.PI / 180; var dLon = (lon2 - lon1) * Math.PI / 180;
   var a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
-  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R * c;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
-
 function showRouteOnMap(pedidos) {
-  routeMarkers.forEach(function(m) { map.removeLayer(m); });
-  routeMarkers = [];
+  routeMarkers.forEach(function(m) { map.removeLayer(m); }); routeMarkers = [];
   if (deliveryPolyline) map.removeLayer(deliveryPolyline);
   var latlngs = [];
-  pedidos.forEach(function(p, idx) {
-    var marker = L.marker([p.latitude, p.longitude]).addTo(map).bindPopup('<b>Pedido ' + p.numero + '</b><br>' + p.cliente + '<br>' + (idx + 1) + 'º da rota');
-    routeMarkers.push(marker);
-    latlngs.push([p.latitude, p.longitude]);
-  });
-  if (latlngs.length > 1) {
-    deliveryPolyline = L.polyline(latlngs, {color: '#2563eb', weight: 4, opacity: 0.7}).addTo(map);
-    map.fitBounds(deliveryPolyline.getBounds(), {padding: [50, 50]});
-  } else if (latlngs.length === 1) {
-    map.setView(latlngs[0], 15);
-  }
+  pedidos.forEach(function(p, idx) { var marker = L.marker([p.latitude, p.longitude]).addTo(map).bindPopup('<b>Pedido ' + p.numero + '</b><br>' + p.cliente); routeMarkers.push(marker); latlngs.push([p.latitude, p.longitude]); });
+  if (latlngs.length > 1) { deliveryPolyline = L.polyline(latlngs, {color: '#2563eb', weight: 4, opacity: 0.7}).addTo(map); map.fitBounds(deliveryPolyline.getBounds(), {padding: [50, 50]}); }
+  else if (latlngs.length === 1) { map.setView(latlngs[0], 15); }
 }
-
 function renderTrackingControls() {
   var isTracking = db.tracking.active && db.tracking.entregadorId === currentUser.id;
-  var html = '';
-  if (isTracking) {
-    html = '<div class="tracking-status"><div class="tracking-dot"></div><div><b>Rastreamento Ativo</b><br>Atualizado: ' + (db.tracking.lastUpdate ? new Date(db.tracking.lastUpdate).toLocaleTimeString() : 'Agora') + '</div></div><button class="btn btn-danger btn-block" onclick="stopTracking()">⏹️ Parar Rastreamento</button>';
-  } else {
-    html = '<div class="tracking-status inactive"><div>Rastreamento inativo</div></div>';
-  }
+  var html = isTracking ? '<div class="tracking-status"><div class="tracking-dot"></div><div><b>Rastreamento Ativo</b><br>Atualizado: ' + (db.tracking.lastUpdate ? new Date(db.tracking.lastUpdate).toLocaleTimeString() : 'Agora') + '</div></div><button class="btn btn-danger btn-block" onclick="stopTracking()">⏹️ Parar Rastreamento</button>' : '<div class="tracking-status inactive"><div>Rastreamento inativo</div></div>';
   document.getElementById('trackingControls').innerHTML = html;
 }
-
 function startTracking() {
-  db.tracking.active = true;
-  db.tracking.entregadorId = currentUser.id;
-  db.tracking.lastUpdate = new Date().toISOString();
-  saveDB();
-  if (navigator.geolocation) {
-    trackingInterval = setInterval(updateTrackingPosition, 5000);
-    updateTrackingPosition();
-    toast('Rastreamento iniciado!', 'success');
-    renderTrackingControls();
-  } else {
-    toast('Geolocalização não suportada pelo navegador', 'error');
-  }
+  db.tracking.active = true; db.tracking.entregadorId = currentUser.id; db.tracking.lastUpdate = new Date().toISOString(); saveDB();
+  if (navigator.geolocation) { trackingInterval = setInterval(updateTrackingPosition, 5000); updateTrackingPosition(); toast('Rastreamento iniciado!', 'success'); renderTrackingControls(); }
+  else { toast('Geolocalização não suportada', 'error'); }
 }
-
 function stopTracking() {
-  db.tracking.active = false;
-  db.tracking.entregadorId = null;
-  db.tracking.currentPosition = null;
-  saveDB();
+  db.tracking.active = false; db.tracking.entregadorId = null; db.tracking.currentPosition = null; saveDB();
   if (trackingInterval) { clearInterval(trackingInterval); trackingInterval = null; }
   if (userMarker) { map.removeLayer(userMarker); userMarker = null; }
-  toast('Rastreamento parado', 'warning');
-  renderTrackingControls();
+  toast('Rastreamento parado', 'warning'); renderTrackingControls();
 }
-
 function updateTrackingPosition() {
   if (!navigator.geolocation) return;
   navigator.geolocation.getCurrentPosition(function(position) {
-    var lat = position.coords.latitude;
-    var lon = position.coords.longitude;
-    db.tracking.currentPosition = { lat: lat, lon: lon };
-    db.tracking.lastUpdate = new Date().toISOString();
-    saveDB();
+    var lat = position.coords.latitude; var lon = position.coords.longitude;
+    db.tracking.currentPosition = { lat: lat, lon: lon }; db.tracking.lastUpdate = new Date().toISOString(); saveDB();
     if (map) {
       if (userMarker) { userMarker.setLatLng([lat, lon]); }
-      else {
-        userMarker = L.marker([lat, lon], {
-          icon: L.divIcon({
-            className: 'custom-div-icon',
-            html: '<div style="background-color:#16a34a;width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);"></div>',
-            iconSize: [20, 20],
-            iconAnchor: [10, 10]
-          })
-        }).addTo(map).bindPopup('📍 Sua posição');
-      }
+      else { userMarker = L.marker([lat, lon], { icon: L.divIcon({ className: 'custom-div-icon', html: '<div style="background-color:#16a34a;width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);"></div>', iconSize: [20, 20], iconAnchor: [10, 10] }) }).addTo(map).bindPopup(' Sua posição'); }
       map.setView([lat, lon], map.getZoom());
     }
     renderTrackingControls();
-  }, function(error) { console.error('Erro geolocalização:', error); }, {
-    enableHighAccuracy: true, timeout: 10000, maximumAge: 0
-  });
+  }, function(error) { console.error('Erro geolocalização:', error); }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+}
+
+/* ============ HISTÓRICO ============ */
+function renderHistorico() {
+  var c = document.getElementById('content');
+  c.innerHTML = '<div class="card"><h3 class="card-title">Histórico Completo</h3><div class="filters"><input type="text" id="fHistNum" placeholder="Nº Pedido" oninput="renderHistList()"><input type="text" id="fHistCli" placeholder="Cliente" oninput="renderHistList()"><input type="date" id="fHistIni" onchange="renderHistList()"><input type="date" id="fHistFim" onchange="renderHistList()"><select id="fHistStatus" onchange="renderHistList()"><option value="">Todos Status</option><option>SEPARADO</option><option>EM_ENTREGA</option><option>ENTREGUE</option><option>PROBLEMA</option></select></div><div id="histList"></div></div>';
+  renderHistList();
+}
+function renderHistList() {
+  var num = (document.getElementById('fHistNum') ? document.getElementById('fHistNum').value : '').toLowerCase();
+  var cli = (document.getElementById('fHistCli') ? document.getElementById('fHistCli').value : '').toLowerCase();
+  var ini = document.getElementById('fHistIni') ? document.getElementById('fHistIni').value : '';
+  var fim = document.getElementById('fHistFim') ? document.getElementById('fHistFim').value : '';
+  var st = document.getElementById('fHistStatus') ? document.getElementById('fHistStatus').value : '';
+  var lista = db.pedidos.slice();
+  if (num) lista = lista.filter(function(p) { return (p.numero || '').toLowerCase().indexOf(num) >= 0; });
+  if (cli) lista = lista.filter(function(p) { return (p.cliente || '').toLowerCase().indexOf(cli) >= 0; });
+  if (ini) lista = lista.filter(function(p) { return p.dataSeparacao && p.dataSeparacao >= ini; });
+  if (fim) lista = lista.filter(function(p) { return p.dataSeparacao && p.dataSeparacao <= fim + 'T23:59'; });
+  if (st) lista = lista.filter(function(p) { return p.status === st; });
+  lista.sort(function(a, b) { return (b.dataSeparacao || '').localeCompare(a.dataSeparacao || ''); });
+  var html = '<div class="table-wrap"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Endereço</th><th>Separador</th><th>Entregador</th><th>Status</th><th>Ações</th></tr></thead><tbody>' +
+    (lista.length ? lista.map(function(p) { return '<tr><td>' + p.numero + '</td><td>' + p.cliente + '</td><td>' + (p.endereco || '-') + '</td><td>' + (p.separador || '-') + '</td><td>' + (p.entregador || '-') + '</td><td><span class="badge badge-' + p.status.toLowerCase().replace('_','-') + '">' + p.status + '</span></td><td><button class="btn btn-sm" onclick="verDetalhes(' + p.id + ')"></button> <button class="btn btn-sm" onclick="verFotos(' + p.id + ')">📷</button></td></tr>'; }).join('') : '<tr><td colspan="7" style="text-align:center; padding: 30px;">Nenhum pedido encontrado</td></tr>') +
+    '</tbody></table></div>';
+  document.getElementById('histList').innerHTML = html;
+}
+function verDetalhes(id) {
+  var p = db.pedidos.find(function(x) { return x.id === id; }); if (!p) return;
+  showModal('<h2>Detalhes do Pedido ' + p.numero + '</h2><p><b>Cliente:</b> ' + p.cliente + ' (' + (p.codigoCliente || '-') + ')</p><p><b>Endereço:</b> ' + (p.endereco || '-') + '</p><hr style="margin:10px 0; border-color:var(--border);"><p><b>Separador:</b> ' + (p.separador || '-') + '</p><p><b>Data/Hora Separação:</b> ' + formatDT(p.dataSeparacao) + '</p><hr style="margin:10px 0; border-color:var(--border);"><p><b>Entregador:</b> ' + (p.entregador || '-') + '</p><p><b>Data/Hora Retirada:</b> ' + formatDT(p.dataRetirada) + '</p><p><b>Data/Hora Entrega:</b> ' + formatDT(p.dataEntrega) + '</p><p><b>Status:</b> <span class="badge badge-' + p.status.toLowerCase().replace('_','-') + '">' + p.status + '</span></p>' + (p.motivoProblema ? '<p><b>Problema:</b> ' + p.motivoProblema + '</p>' : '') + '<div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Fechar</button></div>');
+}
+function verFotos(id) {
+  var p = db.pedidos.find(function(x) { return x.id === id; }); if (!p) return;
+  showModal('<h2>Fotos do Pedido ' + p.numero + '</h2>' + (p.fotoSeparacao ? '<h4 style="margin-top:10px;">Foto da Separação</h4><img src="' + p.fotoSeparacao + '" style="width:100%; border-radius:8px; margin-top:5px;">' : '') + (p.fotoRetirada ? '<h4 style="margin-top:15px;">Foto da Retirada</h4><img src="' + p.fotoRetirada + '" style="width:100%; border-radius:8px; margin-top:5px;">' : '') + (!p.fotoSeparacao && !p.fotoRetirada ? '<p>Sem fotos registradas</p>' : '') + '<div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Fechar</button></div>');
 }
 
 /* ============ FUNCIONÁRIOS ============ */
@@ -677,7 +621,7 @@ function delUsuario(id) { if (!confirm('Excluir usuário?')) return; db.users = 
 function renderRelatorios() {
   if (currentUser.funcao !== 'admin') { navigate('dashboard'); return; }
   var c = document.getElementById('content');
-  c.innerHTML = '<div class="card"><h3 class="card-title">Filtros do Relatório</h3><div class="filters"><input type="date" id="rIni"><input type="date" id="rFim"><input type="text" id="rCli" placeholder="Cliente"><input type="text" id="rPed" placeholder="Nº Pedido"><input type="text" id="rEnt" placeholder="Entregador"><input type="text" id="rSep" placeholder="Separador"></div><button class="btn" onclick="exportExcel()">📊 Exportar Excel</button> <button class="btn btn-danger" onclick="exportPDF()">📄 Exportar PDF</button></div><div class="card"><h3 class="card-title">Prévia</h3><div id="relPrev"></div></div>';
+  c.innerHTML = '<div class="card"><h3 class="card-title">Filtros do Relatório</h3><div class="filters"><input type="date" id="rIni"><input type="date" id="rFim"><input type="text" id="rCli" placeholder="Cliente"><input type="text" id="rPed" placeholder="Nº Pedido"><input type="text" id="rEnt" placeholder="Entregador"><input type="text" id="rSep" placeholder="Separador"></div><button class="btn" onclick="exportExcel()"> Exportar Excel</button> <button class="btn btn-danger" onclick="exportPDF()">📄 Exportar PDF</button></div><div class="card"><h3 class="card-title">Prévia</h3><div id="relPrev"></div></div>';
   updateRelPrev();
   ['rIni','rFim','rCli','rPed','rEnt','rSep'].forEach(function(id) { var el = document.getElementById(id); if (el) { el.addEventListener('input', updateRelPrev); el.addEventListener('change', updateRelPrev); } });
 }
@@ -701,7 +645,7 @@ function updateRelPrev() {
   var lista = getRelData();
   var html = '<div class="table-wrap"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Separador</th><th>Entregador</th><th>Status</th><th>Data</th></tr></thead><tbody>' +
     (lista.length ? lista.slice(0, 50).map(function(p) { return '<tr><td>' + p.numero + '</td><td>' + p.cliente + '</td><td>' + (p.separador || '-') + '</td><td>' + (p.entregador || '-') + '</td><td>' + p.status + '</td><td>' + formatDT(p.dataSeparacao) + '</td></tr>'; }).join('') : '<tr><td colspan="6" style="text-align:center; padding: 30px;">Nenhum registro</td></tr>') +
-    '</tbody></table></div><p style="margin-top:10px; color:var(--text-soft); font-size:13px;">' + lista.length + ' registro(s) encontrado(s)</p>';
+    '</tbody></table></div><p style="margin-top:10px; color:var(--text-soft); font-size:13px;">' + lista.length + ' registro(s)</p>';
   document.getElementById('relPrev').innerHTML = html;
 }
 function exportExcel() {
@@ -710,10 +654,205 @@ function exportExcel() {
   var ws = XLSX.utils.json_to_sheet(data); var wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Relatório'); XLSX.writeFile(wb, 'relatorio_' + new Date().toISOString().split('T')[0] + '.xlsx'); toast('Excel exportado', 'success');
 }
 function exportPDF() {
-  var lista = getRelData(); if (!lista.length) { toast('Nenhum dado para exportar', 'warning'); return; }
-  var jsPDF = window.jspdf.jsPDF; var doc = new jsPDF(); doc.setFontSize(16); doc.text('Relatório de Pedidos', 14, 15); doc.setFontSize(10); doc.text('Gerado em: ' + new Date().toLocaleString('pt-BR'), 14, 22);
+  var lista = getRelData(); if (!lista.length) { toast('Nenhum dado', 'warning'); return; }
+  var doc = new window.jspdf.jsPDF(); doc.setFontSize(16); doc.text('Relatório de Pedidos', 14, 15); doc.setFontSize(10); doc.text('Gerado em: ' + new Date().toLocaleString('pt-BR'), 14, 22);
   doc.autoTable({ startY: 28, head: [['Pedido', 'Cliente', 'Separador', 'Entregador', 'Status', 'Data']], body: lista.map(function(p) { return [p.numero, p.cliente, p.separador || '-', p.entregador || '-', p.status, formatDT(p.dataSeparacao)]; }), styles: { font: 'helvetica', fontStyle: 'bold', fontSize: 8 }, headStyles: { fillColor: [37, 99, 235] } });
   doc.save('relatorio_' + new Date().toISOString().split('T')[0] + '.pdf'); toast('PDF exportado', 'success');
+}
+
+/* ============ BUSCA CEP (ViaCEP) ============ */
+async function buscarCep() {
+  var cepInput = document.getElementById('clienteCep');
+  if (!cepInput) return;
+  var cep = cepInput.value.replace(/\D/g, '');
+  
+  if (cep.length !== 8) {
+    var statusEl = document.getElementById('cepStatus');
+    if (statusEl) { statusEl.textContent = '⚠️ CEP deve ter 8 dígitos'; statusEl.className = 'cep-status error'; }
+    return;
+  }
+  
+  var statusEl = document.getElementById('cepStatus');
+  if (statusEl) { statusEl.textContent = '🔍 Buscando CEP...'; statusEl.className = 'cep-status loading'; }
+  
+  try {
+    var response = await fetch('https://viacep.com.br/ws/' + cep + '/json/');
+    var data = await response.json();
+    
+    if (data.erro) {
+      if (statusEl) { statusEl.textContent = '❌ CEP não encontrado'; statusEl.className = 'cep-status error'; }
+      return;
+    }
+    
+    var rua = document.getElementById('clienteRua');
+    var bairro = document.getElementById('clienteBairro');
+    var cidade = document.getElementById('clienteCidade');
+    
+    if (rua) rua.value = data.logradouro || '';
+    if (bairro) bairro.value = data.bairro || '';
+    if (cidade) cidade.value = (data.localidade || '') + ' - ' + (data.uf || '');
+    
+    if (statusEl) { statusEl.textContent = '✅ Endereço encontrado!'; statusEl.className = 'cep-status success'; }
+    toast('Endereço encontrado pelo CEP', 'success');
+    
+    var num = document.getElementById('clienteNumero');
+    if (num) setTimeout(function() { num.focus(); }, 100);
+    
+  } catch (e) {
+    if (statusEl) { statusEl.textContent = '❌ Erro ao buscar CEP'; statusEl.className = 'cep-status error'; }
+  }
+}
+
+function formatarCep(input) {
+  var v = input.value.replace(/\D/g, '');
+  if (v.length > 5) { v = v.substring(0,5) + '-' + v.substring(5,8); }
+  input.value = v;
+  if (v.replace(/\D/g, '').length === 8) { buscarCep(); }
+}
+
+/* ============ CADASTRO DE CLIENTE - CORRIGIDO ============ */
+function cadastrarClienteEPedido() {
+  // Ler todos os campos
+  var numero = document.getElementById('ocrNum') ? document.getElementById('ocrNum').value.trim() : '';
+  var codigo = document.getElementById('ocrCod') ? document.getElementById('ocrCod').value.trim() : '';
+  var apelido = document.getElementById('clienteApelido') ? document.getElementById('clienteApelido').value.trim() : '';
+  var nome = document.getElementById('clienteNome') ? document.getElementById('clienteNome').value.trim() : '';
+  var cep = document.getElementById('clienteCep') ? document.getElementById('clienteCep').value.trim() : '';
+  var rua = document.getElementById('clienteRua') ? document.getElementById('clienteRua').value.trim() : '';
+  var numeroEnd = document.getElementById('clienteNumero') ? document.getElementById('clienteNumero').value.trim() : '';
+  var complemento = document.getElementById('clienteComplemento') ? document.getElementById('clienteComplemento').value.trim() : '';
+  var bairro = document.getElementById('clienteBairro') ? document.getElementById('clienteBairro').value.trim() : '';
+  var cidade = document.getElementById('clienteCidade') ? document.getElementById('clienteCidade').value.trim() : '';
+  var cnpj = document.getElementById('clienteCnpj') ? document.getElementById('clienteCnpj').value.trim() : '';
+  var telefone = document.getElementById('clienteTelefone') ? document.getElementById('clienteTelefone').value.trim() : '';
+  
+  console.log('Dados do formulário:', { numero, codigo, apelido, nome, rua, numeroEnd, bairro, cidade });
+  
+  // Validar campos obrigatórios e destacar os vazios
+  var camposObrigatorios = [
+    { id: 'ocrNum', valor: numero, nome: 'Número do Pedido' },
+    { id: 'ocrCod', valor: codigo, nome: 'Código do Cliente' },
+    { id: 'clienteApelido', valor: apelido, nome: 'Apelido' },
+    { id: 'clienteRua', valor: rua, nome: 'Rua' },
+    { id: 'clienteNumero', valor: numeroEnd, nome: 'Número do Endereço' },
+    { id: 'clienteBairro', valor: bairro, nome: 'Bairro' },
+    { id: 'clienteCidade', valor: cidade, nome: 'Cidade' }
+  ];
+  
+  var camposFaltando = [];
+  camposObrigatorios.forEach(function(campo) {
+    var el = document.getElementById(campo.id);
+    if (!campo.valor) {
+      camposFaltando.push(campo.nome);
+      if (el) el.classList.add('error');
+    } else {
+      if (el) el.classList.remove('error');
+    }
+  });
+  
+  // Se nome completo estiver vazio, usar o apelido
+  if (!nome) {
+    nome = apelido;
+    var nomeEl = document.getElementById('clienteNome');
+    if (nomeEl) nomeEl.value = nome;
+  }
+  
+  if (camposFaltando.length > 0) {
+    var msg = '⚠️ Preencha os campos:\n\n• ' + camposFaltando.join('\n• ');
+    alert(msg);
+    toast('Preencha: ' + camposFaltando.join(', '), 'error');
+    return;
+  }
+  
+  // Montar endereço completo
+  var enderecoCompleto = rua + ', ' + numeroEnd;
+  if (complemento) enderecoCompleto += ' - ' + complemento;
+  enderecoCompleto += ' - ' + bairro + ', ' + cidade;
+  if (cep) enderecoCompleto += ' (CEP: ' + cep + ')';
+  
+  // Verificar se cliente já existe (pelo código)
+  var clienteExistente = db.clientes.find(function(c) { return c.codigo === codigo; });
+  
+  if (clienteExistente) {
+    // Atualizar dados do cliente existente
+    clienteExistente.apelido = apelido;
+    clienteExistente.nome = nome;
+    clienteExistente.cep = cep;
+    clienteExistente.rua = rua;
+    clienteExistente.numero = numeroEnd;
+    clienteExistente.complemento = complemento;
+    clienteExistente.bairro = bairro;
+    clienteExistente.cidade = cidade;
+    clienteExistente.endereco = enderecoCompleto;
+    if (cnpj) clienteExistente.cnpj = cnpj;
+    if (telefone) clienteExistente.telefone = telefone;
+    toast('Dados do cliente atualizados!', 'success');
+  } else {
+    // Criar novo cliente
+    db.clientes.push({
+      codigo: codigo,
+      apelido: apelido,
+      nome: nome,
+      cep: cep,
+      rua: rua,
+      numero: numeroEnd,
+      complemento: complemento,
+      bairro: bairro,
+      cidade: cidade,
+      endereco: enderecoCompleto,
+      cnpj: cnpj,
+      telefone: telefone,
+      dataCadastro: new Date().toISOString(),
+      latitude: null,
+      longitude: null
+    });
+    toast('Cliente cadastrado!', 'success');
+  }
+  
+  saveDB();
+  
+  // Criar pedido
+  db.pedidos.push({
+    id: Date.now(),
+    numero: numero,
+    codigoCliente: codigo,
+    cliente: apelido,
+    endereco: enderecoCompleto,
+    separador: currentUser.nome,
+    separadorId: currentUser.id,
+    dataSeparacao: new Date().toISOString(),
+    status: 'SEPARADO',
+    fotoSeparacao: fotoAtual || null
+  });
+  saveDB();
+  
+  toast('Pedido separado com sucesso!', 'success');
+  closeModal();
+  renderSeparacao();
+}
+
+function confirmarPedidoCadastrado(modo, foto) {
+  var numero = document.getElementById('ocrNum').value.trim();
+  var codigo = document.getElementById('ocrCod').value.trim();
+  if (!numero) { alert('Informe o número do pedido'); return; }
+  
+  var cliente = db.clientes.find(function(c) { return c.codigo === codigo; });
+  db.pedidos.push({
+    id: Date.now(),
+    numero: numero,
+    codigoCliente: codigo,
+    cliente: cliente ? cliente.apelido : codigo,
+    endereco: cliente ? cliente.endereco : '',
+    separador: currentUser.nome,
+    separadorId: currentUser.id,
+    dataSeparacao: new Date().toISOString(),
+    status: 'SEPARADO',
+    fotoSeparacao: foto
+  });
+  saveDB();
+  toast('Pedido separado com sucesso', 'success');
+  closeModal();
+  renderSeparacao();
 }
 
 /* ============ CÂMERA ============ */
@@ -725,55 +864,19 @@ async function openCamera(modo) {
   currentCameraModo = modo;
   var isMobile = window.innerWidth <= 768;
   var overlayClass = isMobile ? 'modal-overlay camera-modal' : 'modal-overlay';
-  document.getElementById('modalContainer').innerHTML = '<div class="' + overlayClass + '" onclick="if(event.target===this)closeCamera()"><div class="modal">' +
-    '<h2>📷 ' + (modo === 'separacao' ? 'Fotografar Pedido' : 'Receber Pedido') + '</h2>' +
-    '<div class="camera-wrapper">' +
-      '<div class="camera-container" id="camContainer">' +
-        '<div class="camera-hint">👆 Toque na imagem ou no botão para fotografar</div>' +
-        '<div class="camera-focus-ring" id="focusRing"></div>' +
-        '<video id="camVideo" autoplay playsinline muted></video>' +
-      '</div>' +
-      '<div class="camera-controls">' +
-        '<button class="btn-capture" id="btnCapture" onclick="doCapture()" title="Tirar foto">📷</button>' +
-        '<button class="btn-cancel-cam" onclick="closeCamera()">✕ Cancelar</button>' +
-      '</div>' +
-      '<div id="ocrProgress" style="display:none;"><div class="ocr-progress"><div class="ocr-progress-bar" id="ocrBar" style="width:0%"></div></div></div>' +
-      '<p id="ocrStatus" class="ocr-status" style="display:none;"></p>' +
-    '</div>' +
-  '</div></div>';
+  document.getElementById('modalContainer').innerHTML = '<div class="' + overlayClass + '" onclick="if(event.target===this)closeCamera()"><div class="modal"><h2>📷 ' + (modo === 'separacao' ? 'Fotografar Pedido' : 'Receber Pedido') + '</h2><div class="camera-wrapper"><div class="camera-container" id="camContainer"><div class="camera-hint">👆 Toque para fotografar</div><div class="camera-focus-ring" id="focusRing"></div><video id="camVideo" autoplay playsinline muted></video></div><div class="camera-controls"><button class="btn-capture" id="btnCapture" onclick="doCapture()">📷</button><button class="btn-cancel-cam" onclick="closeCamera()">✕ Cancelar</button></div><div id="ocrProgress" style="display:none;"><div class="ocr-progress"><div class="ocr-progress-bar" id="ocrBar" style="width:0%"></div></div></div><p id="ocrStatus" class="ocr-status" style="display:none;"></p></div></div></div>';
   try {
-    var stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280, max: 1920 }, height: { ideal: 720, max: 1080 } },
-      audio: false
-    });
+    var stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280, max: 1920 }, height: { ideal: 720, max: 1080 } }, audio: false });
     cameraStream = stream;
     var video = document.getElementById('camVideo');
     video.srcObject = stream;
-    var container = document.getElementById('camContainer');
-    container.addEventListener('click', function(e) {
-      if (e.target.id === 'btnCapture' || e.target.closest('#btnCapture')) return;
-      showFocusRing(e);
-    });
+    document.getElementById('camContainer').addEventListener('click', function(e) { if (e.target.id === 'btnCapture' || e.target.closest('#btnCapture')) return; showFocusRing(e); });
   } catch (e) {
-    try {
-      var stream2 = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
-      cameraStream = stream2;
-      document.getElementById('camVideo').srcObject = stream2;
-    } catch (e2) {
-      toast('Erro ao acessar câmera: ' + e2.message, 'error');
-      closeModal();
-    }
+    try { var s2 = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false }); cameraStream = s2; document.getElementById('camVideo').srcObject = s2; }
+    catch (e2) { toast('Erro ao acessar câmera: ' + e2.message, 'error'); closeModal(); }
   }
 }
-
-function showFocusRing(e) {
-  var ring = document.getElementById('focusRing'); if (!ring) return;
-  var rect = e.currentTarget.getBoundingClientRect();
-  var x = e.clientX - rect.left - 30; var y = e.clientY - rect.top - 30;
-  ring.style.left = x + 'px'; ring.style.top = y + 'px';
-  ring.classList.remove('active'); void ring.offsetWidth; ring.classList.add('active');
-}
-
+function showFocusRing(e) { var ring = document.getElementById('focusRing'); if (!ring) return; var rect = e.currentTarget.getBoundingClientRect(); ring.style.left = (e.clientX - rect.left - 30) + 'px'; ring.style.top = (e.clientY - rect.top - 30) + 'px'; ring.classList.remove('active'); void ring.offsetWidth; ring.classList.add('active'); }
 function doCapture() { if (!cameraStream) return; capturePhoto(currentCameraModo); }
 function stopCamera() { if (cameraStream) { cameraStream.getTracks().forEach(function(t) { t.stop(); }); cameraStream = null; } }
 function closeCamera() { stopCamera(); document.getElementById('modalContainer').innerHTML = ''; }
@@ -783,115 +886,71 @@ async function capturePhoto(modo) {
   if (!video || !video.videoWidth) { toast('Câmera não está pronta', 'error'); return; }
   var canvas = document.createElement('canvas');
   var w = video.videoWidth; var h = video.videoHeight;
-  var isLandscape = w > h;
-  if (isLandscape) {
-    canvas.width = h; canvas.height = w;
-    var ctx = canvas.getContext('2d');
-    ctx.translate(canvas.width, 0); ctx.rotate(90 * Math.PI / 180);
-    ctx.drawImage(video, 0, 0, w, h);
-  } else { canvas.width = w; canvas.height = h; canvas.getContext('2d').drawImage(video, 0, 0); }
+  if (w > h) { canvas.width = h; canvas.height = w; var ctx = canvas.getContext('2d'); ctx.translate(canvas.width, 0); ctx.rotate(90 * Math.PI / 180); ctx.drawImage(video, 0, 0, w, h); }
+  else { canvas.width = w; canvas.height = h; canvas.getContext('2d').drawImage(video, 0, 0); }
   
   var foto = canvas.toDataURL('image/jpeg', 0.9);
   var progressDiv = document.getElementById('ocrProgress');
   var statusEl = document.getElementById('ocrStatus');
   if (progressDiv) progressDiv.style.display = 'block';
-  if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Processando imagem...'; }
+  if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Processando...'; }
   var camContainer = document.getElementById('camContainer');
   var camControls = document.querySelector('.camera-controls');
   if (camContainer) camContainer.style.display = 'none';
   if (camControls) camControls.style.display = 'none';
   
   try {
-    var ocrResult = await Tesseract.recognize(foto, 'por', {
-      logger: function(m) {
-        if (m.status === 'recognizing text') {
-          var pct = Math.round(m.progress * 100);
-          var bar = document.getElementById('ocrBar');
-          if (bar) bar.style.width = pct + '%';
-          if (statusEl) statusEl.textContent = 'Lendo texto... ' + pct + '%';
-        }
-      }
-    });
+    var ocrResult = await Tesseract.recognize(foto, 'por', { logger: function(m) { if (m.status === 'recognizing text') { var pct = Math.round(m.progress * 100); var bar = document.getElementById('ocrBar'); if (bar) bar.style.width = pct + '%'; if (statusEl) statusEl.textContent = 'Lendo... ' + pct + '%'; } } });
     
     var barcodeResult = null;
     try {
       if (!zxingCodeReader) zxingCodeReader = new ZXing.BrowserMultiFormatReader();
-      var tempImg = new Image();
-      tempImg.src = foto;
-      await new Promise(function(resolve) { tempImg.onload = resolve; });
-      var tempCanvas = document.createElement('canvas');
-      tempCanvas.width = tempImg.width; tempCanvas.height = tempImg.height;
-      tempCanvas.getContext('2d').drawImage(tempImg, 0, 0);
-      barcodeResult = await zxingCodeReader.decodeFromCanvas(tempCanvas);
-    } catch (e) { console.log('Código de barras não detectado:', e.message); }
+      var tempImg = new Image(); tempImg.src = foto; await new Promise(function(resolve) { tempImg.onload = resolve; });
+      var tc = document.createElement('canvas'); tc.width = tempImg.width; tc.height = tempImg.height; tc.getContext('2d').drawImage(tempImg, 0, 0);
+      barcodeResult = await zxingCodeReader.decodeFromCanvas(tc);
+    } catch (e) {}
     
-    var text = ocrResult.data.text;
-    var dados = parseOCR(text);
+    var dados = parseOCR(ocrResult.data.text);
     
     if (barcodeResult && barcodeResult.text) {
-      var barcodeNumero = barcodeResult.text.replace(/[^0-9]/g, '').slice(-8);
-      var ocrNumero = dados.numero ? dados.numero.replace(/[^0-9]/g, '').slice(-8) : '';
-      if (ocrNumero && barcodeNumero && ocrNumero !== barcodeNumero) {
-        if (statusEl) statusEl.textContent = '⚠️ Divergência! Escaneie o código de barras...';
-        await scanBarcodeOnly(foto, dados, modo);
-        return;
-      } else if (barcodeNumero && !ocrNumero) {
-        dados.numero = barcodeNumero;
-        toast('Número do pedido obtido do código de barras', 'success');
-      } else if (ocrNumero === barcodeNumero) {
-        toast('Número do pedido confirmado pelo código de barras ✓', 'success');
-      }
+      var bn = barcodeResult.text.replace(/[^0-9]/g, '').slice(-8);
+      var on = dados.numero ? dados.numero.replace(/[^0-9]/g, '').slice(-8) : '';
+      if (on && bn && on !== bn) { if (statusEl) statusEl.textContent = '⚠️ Divergência!'; await scanBarcodeOnly(foto, dados, modo); return; }
+      else if (bn && !on) { dados.numero = bn; }
     }
     
     if (statusEl) statusEl.textContent = 'OCR concluído!';
     
-    // Buscar cliente pelo código
+    fotoAtual = foto;
+    modoAtual = modo;
+    
+    // Buscar cliente
     var clienteExistente = db.clientes.find(function(c) { return c.codigo === dados.codigo; });
     
     if (clienteExistente) {
-      // Cliente já cadastrado
-      showModal('<h2>Confirmar Dados do Pedido</h2><img src="' + foto + '" style="width:100%; max-height:200px; object-fit:contain; border-radius:8px; margin-bottom:15px;">' +
-        '<p style="margin-bottom:15px; color:var(--success); font-weight:700;">✅ Cliente já cadastrado: <b>' + clienteExistente.apelido + '</b></p>' +
-        '<div class="form-group"><label>Número do Pedido</label><input id="ocrNum" value="' + dados.numero + '"></div>' +
-        '<div class="form-group"><label>Código do Cliente</label><input id="ocrCod" value="' + dados.codigo + '" readonly></div>' +
-        '<div class="form-group"><label>Nome do Cliente (Apelido)</label><input id="ocrCli" value="' + clienteExistente.apelido + '" readonly></div>' +
-        '<div class="form-group"><label>Endereço</label><textarea id="ocrEnd" rows="3" readonly>' + clienteExistente.endereco + '</textarea></div>' +
-        '<div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-success" onclick="confirmarPedido(\'' + modo + '\', \'' + foto.replace(/'/g, "\\'") + '\', true)">✓ Confirmar</button></div>');
+      var endCompleto = clienteExistente.rua + ', ' + clienteExistente.numero + ' - ' + clienteExistente.bairro + ', ' + clienteExistente.cidade;
+      if (clienteExistente.cep) endCompleto += ' (CEP: ' + clienteExistente.cep + ')';
+      
+      showModal('<h2>✅ Cliente Conhecido</h2><img src="' + foto + '" style="width:100%; max-height:150px; object-fit:contain; border-radius:8px; margin-bottom:15px;"><p style="margin-bottom:15px; color:var(--success); font-weight:700;">Cliente: <b>' + clienteExistente.apelido + '</b></p><div class="form-group"><label>Número do Pedido</label><input id="ocrNum" value="' + dados.numero + '"></div><div class="form-group"><label>Código do Cliente</label><input value="' + dados.codigo + '" readonly></div><div class="form-group"><label>Cliente</label><input value="' + clienteExistente.apelido + '" readonly></div><div class="form-group"><label>Endereço</label><textarea rows="2" readonly>' + endCompleto + '</textarea></div><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-success" onclick="confirmarPedidoCadastrado(\'' + modo + '\', \'' + foto.replace(/'/g, "\\'") + '\')">✓ Confirmar</button></div>');
     } else {
       // Novo cliente - tela de cadastro com CEP
-      var clienteNomeOCR = dados.cliente || '';
-      var apelidoSugerido = clienteNomeOCR ? clienteNomeOCR.split(' ')[0] : '';
-      
-      showModal('<h2>📋 Novo Cliente - Cadastro</h2>' +
-        '<img src="' + foto + '" style="width:100%; max-height:150px; object-fit:contain; border-radius:8px; margin-bottom:15px;">' +
-        '<p style="margin-bottom:15px; color:var(--warning); font-weight:700;">Primeiro pedido para este cliente. Complete o cadastro:</p>' +
-        
-        '<div class="section-divider">📦 Pedido</div>' +
-        '<div class="form-group"><label>Número do Pedido</label><input id="ocrNum" value="' + dados.numero + '"></div>' +
-        '<div class="form-group"><label>Código do Cliente</label><input id="ocrCod" value="' + dados.codigo + '"></div>' +
-        
-        '<div class="section-divider">👤 Dados do Cliente</div>' +
-        '<div class="form-group"><label>Apelido (Nome Resumido) *</label><input id="clienteApelido" placeholder="Ex: Munhoz" value="' + apelidoSugerido + '"></div>' +
-        '<div class="form-group"><label>Nome Completo (Razão Social) *</label><input id="clienteNome" value="' + clienteNomeOCR + '"></div>' +
-        '<div class="form-group"><label>CNPJ</label><input id="clienteCnpj" value=""></div>' +
-        '<div class="form-group"><label>Telefone</label><input id="clienteTelefone" value=""></div>' +
-        
-        '<div class="section-divider">📍 Endereço (digite o CEP primeiro)</div>' +
-        '<div class="cep-row">' +
-          '<div class="form-group"><label>CEP *</label><input id="clienteCep" placeholder="00000-000" maxlength="9" oninput="mascaraCEP(this); verificarCEPAuto();" onblur="buscarCEP()"></div>' +
-          '<button class="btn btn-sm" onclick="buscarCEP()" type="button">🔍</button>' +
+      showModal('<h2> Novo Cliente</h2><p style="margin-bottom:15px; color:var(--warning); font-weight:700;">Primeiro pedido para este cliente. Complete o cadastro:</p>' +
+        '<div class="form-group"><label>Nº do Pedido <span class="required">*</span></label><input id="ocrNum" value="' + dados.numero + '"></div>' +
+        '<div class="form-group"><label>Código do Cliente <span class="required">*</span></label><input id="ocrCod" value="' + dados.codigo + '"></div>' +
+        '<div class="form-group"><label>Apelido <span class="required">*</span> <small style="color:var(--text-soft); font-weight:600;">(nome resumido)</small></label><input id="clienteApelido" placeholder="Ex: Munhoz"></div>' +
+        '<div class="form-group"><label>Nome Completo <small style="color:var(--text-soft); font-weight:600;">(opcional)</small></label><input id="clienteNome" placeholder="Razão social"></div>' +
+        '<div class="endereco-section"><h4>📍 Endereço</h4>' +
+          '<div class="form-group"><label>CEP</label><div class="cep-group"><input id="clienteCep" placeholder="00000-000" maxlength="9" oninput="formatarCep(this)"><button class="btn btn-sm" onclick="buscarCep()"></button></div><div id="cepStatus" class="cep-status"></div></div>' +
+          '<div class="form-group"><label>Rua <span class="required">*</span></label><input id="clienteRua" placeholder="Preenchido pelo CEP"></div>' +
+          '<div class="endereco-row"><div class="form-group"><label>Número <span class="required">*</span></label><input id="clienteNumero" placeholder="Nº"></div><div class="form-group"><label>Complemento</label><input id="clienteComplemento" placeholder="Sala, Apto..."></div></div>' +
+          '<div class="form-group"><label>Bairro <span class="required">*</span></label><input id="clienteBairro" placeholder="Preenchido pelo CEP"></div>' +
+          '<div class="form-group"><label>Cidade - UF <span class="required">*</span></label><input id="clienteCidade" placeholder="Preenchido pelo CEP"></div>' +
         '</div>' +
-        '<div class="cep-status" id="cepStatus"></div>' +
-        '<div class="form-group"><label>Rua / Logradouro *</label><input id="clienteRua" readonly></div>' +
-        '<div class="form-group"><label>Número *</label><input id="clienteNumero" placeholder="Ex: 123"></div>' +
-        '<div class="form-group"><label>Bairro *</label><input id="clienteBairro" readonly></div>' +
-        '<div class="form-group"><label>Cidade / UF *</label><input id="clienteCidade" readonly></div>' +
-        '<div class="form-group"><label>Complemento</label><input id="clienteComplemento" placeholder="Ex: Sala 101, Apto 202 (opcional)"></div>' +
-        
-        '<div class="modal-actions">' +
-          '<button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>' +
-          '<button class="btn btn-success" onclick="cadastrarClienteEPedido(\'' + modo + '\', \'' + foto.replace(/'/g, "\\'") + '\')">✓ Cadastrar e Confirmar</button>' +
-        '</div>');
+        '<div class="form-group"><label>CNPJ</label><input id="clienteCnpj" placeholder="00.000.000/0000-00"></div>' +
+        '<div class="form-group"><label>Telefone</label><input id="clienteTelefone" placeholder="(00) 00000-0000"></div>' +
+        '<p style="font-size:12px; color:var(--text-soft); margin-bottom:15px;"><span class="required">*</span> = campos obrigatórios</p>' +
+        '<div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-success" onclick="cadastrarClienteEPedido()">✓ Cadastrar e Confirmar</button></div>'
+      );
     }
   } catch (e) {
     toast('Erro no OCR: ' + e.message, 'error');
@@ -901,289 +960,52 @@ async function capturePhoto(modo) {
   }
 }
 
-/* ============ BUSCA DE CEP (ViaCEP) ============ */
-function mascaraCEP(input) {
-  var v = input.value.replace(/\D/g, '');
-  if (v.length > 5) v = v.substring(0, 5) + '-' + v.substring(5, 8);
-  input.value = v;
-}
-
-function verificarCEPAuto() {
-  var cep = document.getElementById('clienteCep').value.replace(/\D/g, '');
-  if (cep.length === 8) {
-    setTimeout(function() { buscarCEP(); }, 300);
-  }
-}
-
-async function buscarCEP() {
-  var cepInput = document.getElementById('clienteCep');
-  var statusEl = document.getElementById('cepStatus');
-  var cep = cepInput.value.replace(/\D/g, '');
-  
-  if (cep.length !== 8) {
-    if (cep.length > 0) {
-      statusEl.className = 'cep-status error';
-      statusEl.textContent = '⚠️ Digite o CEP completo (8 dígitos)';
-    }
-    return;
-  }
-  
-  // Mostrar loading
-  statusEl.className = 'cep-status loading';
-  statusEl.textContent = '🔍 Buscando CEP...';
-  
-  try {
-    var response = await fetch('https://viacep.com.br/ws/' + cep + '/json/');
-    var data = await response.json();
-    
-    if (data.erro) {
-      statusEl.className = 'cep-status error';
-      statusEl.textContent = '❌ CEP não encontrado. Preencha manualmente.';
-      liberarCamposEndereco();
-      return;
-    }
-    
-    // Preencher campos
-    document.getElementById('clienteRua').value = data.logradouro || '';
-    document.getElementById('clienteBairro').value = data.bairro || '';
-    document.getElementById('clienteCidade').value = (data.localidade || '') + (data.uf ? ' - ' + data.uf : '');
-    
-    statusEl.className = 'cep-status success';
-    statusEl.textContent = '✅ Endereço encontrado! Preencha o número.';
-    
-    // Focar no campo número
-    document.getElementById('clienteNumero').focus();
-    
-  } catch (e) {
-    statusEl.className = 'cep-status error';
-    statusEl.textContent = '❌ Erro ao buscar CEP. Preencha manualmente.';
-    liberarCamposEndereco();
-  }
-}
-
-function liberarCamposEndereco() {
-  ['clienteRua', 'clienteBairro', 'clienteCidade'].forEach(function(id) {
-    var el = document.getElementById(id);
-    if (el) el.removeAttribute('readonly');
-  });
-}
-
-function cadastrarClienteEPedido(modo, foto) {
-  var numero = document.getElementById('ocrNum').value.trim();
-  var codigo = document.getElementById('ocrCod').value.trim();
-  var apelido = document.getElementById('clienteApelido').value.trim();
-  var nome = document.getElementById('clienteNome').value.trim();
-  var cnpj = document.getElementById('clienteCnpj').value.trim();
-  var telefone = document.getElementById('clienteTelefone').value.trim();
-  var cep = document.getElementById('clienteCep').value.trim();
-  var rua = document.getElementById('clienteRua').value.trim();
-  var numEnd = document.getElementById('clienteNumero').value.trim();
-  var bairro = document.getElementById('clienteBairro').value.trim();
-  var cidade = document.getElementById('clienteCidade').value.trim();
-  var complemento = document.getElementById('clienteComplemento').value.trim();
-  
-  // Validações
-  if (!numero) { toast('Informe o número do pedido', 'error'); return; }
-  if (!codigo) { toast('Informe o código do cliente', 'error'); return; }
-  if (!apelido) { toast('Informe o apelido do cliente', 'error'); return; }
-  if (!nome) { toast('Informe o nome completo', 'error'); return; }
-  if (!rua) { toast('Informe a rua (busque pelo CEP)', 'error'); return; }
-  if (!numEnd) { toast('Informe o número do endereço', 'error'); return; }
-  if (!bairro) { toast('Informe o bairro', 'error'); return; }
-  if (!cidade) { toast('Informe a cidade', 'error'); return; }
-  
-  // Montar endereço completo
-  var enderecoCompleto = rua + ', ' + numEnd;
-  if (complemento) enderecoCompleto += ' - ' + complemento;
-  enderecoCompleto += ' - ' + bairro + ' - ' + cidade;
-  if (cep) enderecoCompleto += ' - CEP: ' + cep;
-  
-  // Salvar cliente
-  var novoCliente = {
-    codigo: codigo,
-    apelido: apelido,
-    nome: nome,
-    cnpj: cnpj,
-    telefone: telefone,
-    cep: cep,
-    rua: rua,
-    numero: numEnd,
-    bairro: bairro,
-    cidade: cidade,
-    complemento: complemento,
-    endereco: enderecoCompleto,
-    dataCadastro: new Date().toISOString(),
-    latitude: null,
-    longitude: null
-  };
-  
-  db.clientes.push(novoCliente);
-  
-  // Criar pedido
-  var pedido = {
-    id: Date.now(),
-    numero: numero,
-    codigoCliente: codigo,
-    cliente: apelido,
-    endereco: enderecoCompleto,
-    separador: currentUser.nome,
-    separadorId: currentUser.id,
-    dataSeparacao: new Date().toISOString(),
-    status: 'SEPARADO',
-    fotoSeparacao: foto
-  };
-  
-  db.pedidos.push(pedido);
-  saveDB();
-  toast('Cliente cadastrado e pedido separado com sucesso!', 'success');
-  closeModal();
-  renderSeparacao();
-}
-
 async function scanBarcodeOnly(fotoOriginal, dadosOCR, modo) {
-  return new Promise(function(resolve) {
-    showModal('<h2>📊 Escanear Código de Barras</h2><p style="margin-bottom:15px; font-size:14px; color:var(--text-soft);">O número do pedido do OCR diverge do código de barras. Por favor, escaneie o código de barras para corrigir.</p>' +
-      '<div class="camera-wrapper">' +
-        '<div class="camera-container" id="barcodeCamContainer" style="height:40vh;">' +
-          '<video id="barcodeVideo" autoplay playsinline muted></video>' +
-        '</div>' +
-        '<div class="camera-controls">' +
-          '<button class="btn-cancel-cam" onclick="closeBarcodeScanner()">✕ Cancelar</button>' +
-        '</div>' +
-      '</div>'
-    );
-    var video = document.getElementById('barcodeVideo');
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } })
-      .then(function(stream) {
-        video.srcObject = stream;
-        var codeReader = new ZXing.BrowserMultiFormatReader();
-        function tryDecode() {
-          if (!document.getElementById('barcodeVideo')) return;
-          codeReader.decodeFromVideoDevice(null, video, function(result, err) {
-            if (result) {
-              var barcodeNum = result.text.replace(/[^0-9]/g, '').slice(-8);
-              stream.getTracks().forEach(function(t) { t.stop(); });
-              closeModal();
-              dadosOCR.numero = barcodeNum;
-              toast('Número do pedido corrigido: ' + barcodeNum, 'success');
-              showModal('<h2>Confirmar Dados do Pedido</h2><img src="' + fotoOriginal + '" style="width:100%; max-height:200px; object-fit:contain; border-radius:8px; margin-bottom:15px;"><div class="form-group"><label>Número do Pedido <span style="color:var(--success);">(✓ Código de Barras)</span></label><input id="ocrNum" value="' + dadosOCR.numero + '"></div><div class="form-group"><label>Código do Cliente</label><input id="ocrCod" value="' + dadosOCR.codigo + '"></div><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-success" onclick="confirmarPedido(\'' + modo + '\', \'' + fotoOriginal.replace(/'/g, "\\'") + '\')">✓ Confirmar</button></div>');
-            }
-          });
-        }
-        setTimeout(tryDecode, 1000);
-      })
-      .catch(function(e) { toast('Erro ao acessar câmera: ' + e.message, 'error'); resolve(); });
-  });
-}
-
-function closeBarcodeScanner() {
+  showModal('<h2>📊 Escanear Código de Barras</h2><p style="margin-bottom:15px; font-size:14px; color:var(--text-soft);">Escaneie o código de barras.</p><div class="camera-wrapper"><div class="camera-container" style="height:40vh;"><video id="barcodeVideo" autoplay playsinline muted></video></div><div class="camera-controls"><button class="btn-cancel-cam" onclick="closeBarcodeScanner()">✕ Cancelar</button></div></div>');
   var video = document.getElementById('barcodeVideo');
-  if (video && video.srcObject) video.srcObject.getTracks().forEach(function(t) { t.stop(); });
-  closeModal();
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } }).then(function(stream) {
+    video.srcObject = stream;
+    var cr = new ZXing.BrowserMultiFormatReader();
+    setTimeout(function() {
+      if (!document.getElementById('barcodeVideo')) return;
+      cr.decodeFromVideoDevice(null, video, function(result) {
+        if (result) {
+          var bn = result.text.replace(/[^0-9]/g, '').slice(-8);
+          stream.getTracks().forEach(function(t) { t.stop(); });
+          closeModal();
+          dadosOCR.numero = bn;
+          toast('Número corrigido: ' + bn, 'success');
+          
+          var clienteExistente = db.clientes.find(function(c) { return c.codigo === dadosOCR.codigo; });
+          if (clienteExistente) {
+            showModal('<h2>✅ Cliente Conhecido</h2><div class="form-group"><label>Número do Pedido ✓</label><input value="' + bn + '" readonly></div><div class="form-group"><label>Cliente</label><input value="' + clienteExistente.apelido + '" readonly></div><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-success" onclick="confirmarPedidoCadastrado(\'' + modo + '\', \'' + fotoOriginal.replace(/'/g, "\\'") + '\')">✓ Confirmar</button></div>');
+          } else {
+            fotoAtual = fotoOriginal; modoAtual = modo;
+            showModal('<h2>📋 Novo Cliente</h2><div class="form-group"><label>Nº do Pedido <span class="required">*</span></label><input id="ocrNum" value="' + bn + '"></div><div class="form-group"><label>Código <span class="required">*</span></label><input id="ocrCod" value="' + dadosOCR.codigo + '"></div><div class="form-group"><label>Apelido <span class="required">*</span></label><input id="clienteApelido"></div><div class="form-group"><label>Nome Completo</label><input id="clienteNome"></div><div class="endereco-section"><h4>📍 Endereço</h4><div class="form-group"><label>CEP</label><div class="cep-group"><input id="clienteCep" maxlength="9" oninput="formatarCep(this)"><button class="btn btn-sm" onclick="buscarCep()">🔍</button></div><div id="cepStatus" class="cep-status"></div></div><div class="form-group"><label>Rua <span class="required">*</span></label><input id="clienteRua"></div><div class="endereco-row"><div class="form-group"><label>Número <span class="required">*</span></label><input id="clienteNumero"></div><div class="form-group"><label>Complemento</label><input id="clienteComplemento"></div></div><div class="form-group"><label>Bairro <span class="required">*</span></label><input id="clienteBairro"></div><div class="form-group"><label>Cidade - UF <span class="required">*</span></label><input id="clienteCidade"></div></div><div class="form-group"><label>CNPJ</label><input id="clienteCnpj"></div><div class="form-group"><label>Telefone</label><input id="clienteTelefone"></div><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-success" onclick="cadastrarClienteEPedido()">✓ Cadastrar</button></div>');
+          }
+        }
+      });
+    }, 1000);
+  }).catch(function(e) { toast('Erro câmera: ' + e.message, 'error'); });
 }
+function closeBarcodeScanner() { var v = document.getElementById('barcodeVideo'); if (v && v.srcObject) v.srcObject.getTracks().forEach(function(t) { t.stop(); }); closeModal(); }
 
-function confirmarPedido(modo, foto, clienteCadastrado) {
-  var numero = document.getElementById('ocrNum').value.trim();
-  var codigo = document.getElementById('ocrCod').value.trim();
-  if (!numero) { toast('Informe o número do pedido', 'error'); return; }
-  if (modo === 'separacao') {
-    var clienteNome = '';
-    var endereco = '';
-    if (clienteCadastrado) {
-      var cliente = db.clientes.find(function(c) { return c.codigo === codigo; });
-      if (cliente) { clienteNome = cliente.apelido; endereco = cliente.endereco; }
-    }
-    var pedido = {
-      id: Date.now(),
-      numero: numero,
-      codigoCliente: codigo,
-      cliente: clienteNome || document.getElementById('ocrCli').value.trim(),
-      endereco: endereco || document.getElementById('ocrEnd').value.trim(),
-      separador: currentUser.nome,
-      separadorId: currentUser.id,
-      dataSeparacao: new Date().toISOString(),
-      status: 'SEPARADO',
-      fotoSeparacao: foto
-    };
-    db.pedidos.push(pedido);
-    saveDB();
-    toast('Pedido separado com sucesso', 'success');
-    closeModal();
-    renderSeparacao();
-  }
-}
-
-/* ============ ENTRADA MANUAL ============ */
 function entradaManual(modo) {
-  showModal('<h2>Inserir Dados Manualmente</h2><div class="form-group"><label>Número do Pedido</label><input id="ocrNum"></div><div class="form-group"><label>Código do Cliente</label><input id="ocrCod"></div><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-success" onclick="confirmarManual(\'' + modo + '\')">✓ Confirmar</button></div>');
-}
-function confirmarManual(modo) {
-  var numero = document.getElementById('ocrNum').value.trim();
-  var codigo = document.getElementById('ocrCod').value.trim();
-  if (!numero) { toast('Informe o número do pedido', 'error'); return; }
-  
-  // Verificar se cliente existe
-  var clienteExistente = db.clientes.find(function(c) { return c.codigo === codigo; });
-  if (!clienteExistente) {
-    toast('Cliente não cadastrado. Use a câmera para cadastrar.', 'error');
-    return;
-  }
-  
-  if (modo === 'separacao') {
-    var pedido = {
-      id: Date.now(),
-      numero: numero,
-      codigoCliente: codigo,
-      cliente: clienteExistente.apelido,
-      endereco: clienteExistente.endereco,
-      separador: currentUser.nome,
-      separadorId: currentUser.id,
-      dataSeparacao: new Date().toISOString(),
-      status: 'SEPARADO',
-      fotoSeparacao: null
-    };
-    db.pedidos.push(pedido);
-    saveDB();
-    toast('Pedido separado com sucesso', 'success');
-    closeModal();
-    renderSeparacao();
-  }
+  fotoAtual = null; modoAtual = modo;
+  showModal('<h2>Inserir Manualmente</h2><div class="form-group"><label>Nº do Pedido <span class="required">*</span></label><input id="ocrNum"></div><div class="form-group"><label>Código <span class="required">*</span></label><input id="ocrCod"></div><div class="form-group"><label>Apelido <span class="required">*</span></label><input id="clienteApelido"></div><div class="form-group"><label>Nome Completo</label><input id="clienteNome"></div><div class="endereco-section"><h4>📍 Endereço</h4><div class="form-group"><label>CEP</label><div class="cep-group"><input id="clienteCep" maxlength="9" oninput="formatarCep(this)"><button class="btn btn-sm" onclick="buscarCep()">🔍</button></div><div id="cepStatus" class="cep-status"></div></div><div class="form-group"><label>Rua <span class="required">*</span></label><input id="clienteRua"></div><div class="endereco-row"><div class="form-group"><label>Número <span class="required">*</span></label><input id="clienteNumero"></div><div class="form-group"><label>Complemento</label><input id="clienteComplemento"></div></div><div class="form-group"><label>Bairro <span class="required">*</span></label><input id="clienteBairro"></div><div class="form-group"><label>Cidade - UF <span class="required">*</span></label><input id="clienteCidade"></div></div><div class="form-group"><label>CNPJ</label><input id="clienteCnpj"></div><div class="form-group"><label>Telefone</label><input id="clienteTelefone"></div><p style="font-size:12px; color:var(--text-soft); margin-bottom:15px;"><span class="required">*</span> = obrigatórios</p><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-success" onclick="cadastrarClienteEPedido()">✓ Confirmar</button></div>');
 }
 
 /* ============ PARSER OCR ============ */
 function parseOCR(text) {
   var t = text.toUpperCase();
-  var numero = '', codigo = '', cliente = '';
-  
+  var numero = '', codigo = '';
   var mPedido = t.match(/(?:ABERIO|ABERTO|ABERT0|PEDIDO)\s*[-–]?\s*N[O0º°]?\s*([0-9]+)/);
-  if (mPedido) {
-    numero = mPedido[1].replace(/[^0-9]/g, '');
-    if (numero.length > 8) numero = numero.slice(-8);
-  }
-  if (!numero) {
-    var mNum = t.match(/N[O0º°]\s*([0-9]{6,})/);
-    if (mNum) { numero = mNum[1].replace(/[^0-9]/g, ''); if (numero.length > 8) numero = numero.slice(-8); }
-  }
-  
-  var idxCupom = t.indexOf('CUPOM SEM VALOR FISCAL');
-  if (idxCupom < 0) idxCupom = t.indexOf('GUPOM');
-  if (idxCupom >= 0) {
-    var textoApos = text.substring(idxCupom);
-    var mCod = textoApos.match(/^(\d{2,5})\s*[-–—]/m);
-    if (mCod) codigo = mCod[1];
-    // Tentar pegar o nome também
-    var mCli = textoApos.match(/^(\d{2,5})\s*[-–—]\s*([^\n]+)/m);
-    if (mCli) {
-      cliente = mCli[2].trim();
-      cliente = cliente.replace(/\s*(LTDA|LIDA|ME|EPP)\s*$/i, '').trim();
-    }
-  }
-  if (!codigo) {
-    var mCod2 = t.match(/(\d{2,5})\s*[-–—]\s*[A-Z]/);
-    if (mCod2) codigo = mCod2[1];
-  }
-  
-  return { numero: numero, codigo: codigo, cliente: cliente };
+  if (mPedido) { numero = mPedido[1].replace(/[^0-9]/g, ''); if (numero.length > 8) numero = numero.slice(-8); }
+  if (!numero) { var mNum = t.match(/N[O0º°]\s*([0-9]{6,})/); if (mNum) { numero = mNum[1].replace(/[^0-9]/g, ''); if (numero.length > 8) numero = numero.slice(-8); } }
+  var idxCupom = t.indexOf('CUPOM SEM VALOR FISCAL'); if (idxCupom < 0) idxCupom = t.indexOf('GUPOM');
+  if (idxCupom >= 0) { var mCod = text.substring(idxCupom).match(/^(\d{2,5})\s*[-–—]/m); if (mCod) codigo = mCod[1]; }
+  if (!codigo) { var mCod2 = t.match(/(\d{2,5})\s*[-–—]\s*[A-Z]/); if (mCod2) codigo = mCod2[1]; }
+  return { numero: numero, codigo: codigo };
 }
 
 /* ============ MODAL ============ */
