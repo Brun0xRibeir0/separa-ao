@@ -213,7 +213,7 @@ tr:hover { background: var(--surface-2); }
 
 <div id="loginScreen" class="login-wrap">
   <div class="login-box">
-    <h1> Separação & Entrega</h1>
+    <h1>📦 Separação & Entrega</h1>
     <p class="sub">Sistema de Controle de Pedidos</p>
     <div class="form-group"><label>Usuário</label><input type="text" id="loginUser" placeholder="Digite seu usuário"></div>
     <div class="form-group"><label>Senha</label><input type="password" id="loginPass" placeholder="Digite sua senha"></div>
@@ -224,7 +224,7 @@ tr:hover { background: var(--surface-2); }
 
 <div id="appScreen" class="app hidden">
   <aside class="sidebar" id="sidebar">
-    <div class="sidebar-header"><h2>📦 Pedidos</h2><div class="user-info" id="userInfo"></div></div>
+    <div class="sidebar-header"><h2> Pedidos</h2><div class="user-info" id="userInfo"></div></div>
     <nav id="navMenu"></nav>
   </aside>
   <main class="main">
@@ -246,7 +246,7 @@ tr:hover { background: var(--surface-2); }
 
 <script>
 /* ============ ESTADO ============ */
-const DB_KEY = 'sep_entrega_db_v17';
+const DB_KEY = 'sep_entrega_db_v18';
 let db = {
   users: [
     { id: 1, login: 'admin', pass: 'admin', nome: 'Administrador', funcao: 'admin', ativo: true },
@@ -274,7 +274,6 @@ let fotoAtual = null;
 let modoAtual = null;
 let isProcessing = false;
 
-// Expor funções globalmente
 window.doLogin = doLogin;
 window.doLogout = doLogout;
 window.toggleTheme = toggleTheme;
@@ -395,7 +394,7 @@ function buildNav() {
     { id: 'roteirizacao', icon: '🗺️', label: 'Roteirização' }
   ];
   if (currentUser.funcao === 'admin') {
-    items.push({ id: 'funcionarios', icon: '', label: 'Funcionários' });
+    items.push({ id: 'funcionarios', icon: '👥', label: 'Funcionários' });
     items.push({ id: 'usuarios', icon: '🔐', label: 'Usuários' });
     items.push({ id: 'relatorios', icon: '📄', label: 'Relatórios' });
   }
@@ -446,7 +445,7 @@ function renderDashboard() {
       '<div class="stat-card danger"><div class="label">Atrasados</div><div class="value">' + atrasados + '</div></div>' +
     '</div>' +
     '<div class="dashboard-grid">' +
-      '<div class="table-card"><h3 class="card-title"> Últimos Pedidos</h3><div class="table-wrap"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Status</th><th>Separador</th><th>Data</th></tr></thead><tbody>' +
+      '<div class="table-card"><h3 class="card-title">📋 Últimos Pedidos</h3><div class="table-wrap"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Status</th><th>Separador</th><th>Data</th></tr></thead><tbody>' +
         (db.pedidos.length ? db.pedidos.slice(-20).reverse().map(function(p) { return '<tr><td>' + p.numero + '</td><td>' + p.cliente + '</td><td><span class="badge badge-' + p.status.toLowerCase().replace('_','-') + '">' + p.status + '</span></td><td>' + (p.separador || '-') + '</td><td>' + formatDT(p.dataSeparacao) + '</td></tr>'; }).join('') : '<tr><td colspan="5" style="text-align:center; padding: 30px;">Nenhum pedido</td></tr>') +
       '</tbody></table></div></div>' +
       '<div><div class="chart-grid"><div class="chart-card"><h3>Separações por Dia</h3><canvas id="chartSep"></canvas></div><div class="chart-card"><h3>Entregas por Dia</h3><canvas id="chartEnt"></canvas></div></div></div>' +
@@ -629,23 +628,38 @@ async function renderRouteInfo() {
     return; 
   }
   
+  // Mostrar loading
+  document.getElementById('routeInfo').innerHTML = '<p style="color:var(--primary); text-align:center; padding:40px;">🔍 Geocodificando endereços... Aguarde...</p>';
+  
   var geocodedPedidos = [];
   for (var i = 0; i < pedidosEntrega.length; i++) {
     var p = pedidosEntrega[i];
+    console.log('Geocodificando pedido:', p.numero, 'Endereço:', p.endereco);
+    
     if (!p.latitude || !p.longitude) { 
       var coords = await geocodeAddress(p.endereco); 
       if (coords) { 
         p.latitude = coords.lat; 
         p.longitude = coords.lon; 
-      } 
+        console.log('✅ Geocodificado:', coords);
+      } else {
+        console.log('❌ Falha ao geocodificar:', p.endereco);
+      }
     }
     if (p.latitude && p.longitude) { 
       geocodedPedidos.push(p); 
     }
+    
+    // Delay entre requisições para não ser bloqueado
+    if (i < pedidosEntrega.length - 1) {
+      await new Promise(function(resolve) { setTimeout(resolve, 1100); });
+    }
   }
   
+  console.log('Pedidos geocodificados:', geocodedPedidos.length);
+  
   if (!geocodedPedidos.length) { 
-    document.getElementById('routeInfo').innerHTML = '<p style="color:var(--text-soft); text-align:center;">Não foi possível geocodificar os endereços.</p>'; 
+    document.getElementById('routeInfo').innerHTML = '<p style="color:var(--text-soft); text-align:center; padding:40px;">Não foi possível geocodificar os endereços. Verifique se os endereços estão completos.</p>'; 
     return; 
   }
   
@@ -683,16 +697,64 @@ async function renderRouteInfo() {
   showRouteOnMap(optimizedRoute);
 }
 
+// Função de geocodificação CORRIGIDA
 async function geocodeAddress(address) {
-  try { 
-    var response = await fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(address) + '&limit=1'); 
-    var data = await response.json(); 
-    if (data && data.length > 0) { 
-      return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) }; 
-    } 
-  } catch (e) { 
-    console.error('Erro geocodificação:', e); 
+  if (!address || address.length < 10) {
+    console.log('Endereço muito curto:', address);
+    return null;
   }
+  
+  // Limpar o endereço - remover "CEP: XXXXX" e outros sufixos
+  var cleanAddress = address
+    .replace(/\(CEP:\s*\d{5}-?\d{3}\)/g, '')
+    .replace(/CEP:\s*\d{5}-?\d{3}/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  
+  console.log('Endereço limpo:', cleanAddress);
+  
+  // Tentar até 2 vezes
+  for (var tentativa = 0; tentativa < 2; tentativa++) {
+    try {
+      var url = 'https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(cleanAddress) + '&limit=1&countrycodes=br';
+      
+      var response = await fetch(url, {
+        headers: {
+          'User-Agent': 'SistemaSepEntrega/1.0',
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        console.log('HTTP error:', response.status);
+        if (tentativa < 1) {
+          await new Promise(function(resolve) { setTimeout(resolve, 2000); });
+          continue;
+        }
+        return null;
+      }
+      
+      var data = await response.json();
+      
+      if (data && data.length > 0) {
+        console.log('Resultado Nominatim:', data[0].display_name);
+        return { 
+          lat: parseFloat(data[0].lat), 
+          lon: parseFloat(data[0].lon) 
+        };
+      }
+      
+      return null;
+    } catch (e) {
+      console.error('Erro na tentativa ' + (tentativa + 1) + ':', e);
+      if (tentativa < 1) {
+        await new Promise(function(resolve) { setTimeout(resolve, 2000); });
+        continue;
+      }
+      return null;
+    }
+  }
+  
   return null;
 }
 
@@ -838,7 +900,7 @@ function renderHistList() {
   if (st) lista = lista.filter(function(p) { return p.status === st; });
   lista.sort(function(a, b) { return (b.dataSeparacao || '').localeCompare(a.dataSeparacao || ''); });
   var html = '<div class="table-wrap"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Endereço</th><th>Separador</th><th>Entregador</th><th>Status</th><th>Ações</th></tr></thead><tbody>' +
-    (lista.length ? lista.map(function(p) { return '<tr><td>' + p.numero + '</td><td>' + p.cliente + '</td><td>' + (p.endereco || '-') + '</td><td>' + (p.separador || '-') + '</td><td>' + (p.entregador || '-') + '</td><td><span class="badge badge-' + p.status.toLowerCase().replace('_','-') + '">' + p.status + '</span></td><td><button class="btn btn-sm" onclick="verDetalhes(' + p.id + ')">👁</button> <button class="btn btn-sm" onclick="verFotos(' + p.id + ')"></button></td></tr>'; }).join('') : '<tr><td colspan="7" style="text-align:center; padding: 30px;">Nenhum pedido encontrado</td></tr>') +
+    (lista.length ? lista.map(function(p) { return '<tr><td>' + p.numero + '</td><td>' + p.cliente + '</td><td>' + (p.endereco || '-') + '</td><td>' + (p.separador || '-') + '</td><td>' + (p.entregador || '-') + '</td><td><span class="badge badge-' + p.status.toLowerCase().replace('_','-') + '">' + p.status + '</span></td><td><button class="btn btn-sm" onclick="verDetalhes(' + p.id + ')">👁</button> <button class="btn btn-sm" onclick="verFotos(' + p.id + ')">📷</button></td></tr>'; }).join('') : '<tr><td colspan="7" style="text-align:center; padding: 30px;">Nenhum pedido encontrado</td></tr>') +
     '</tbody></table></div>';
   document.getElementById('histList').innerHTML = html;
 }
@@ -903,7 +965,7 @@ function delUsuario(id) { if (!confirm('Excluir usuário?')) return; db.users = 
 function renderRelatorios() {
   if (currentUser.funcao !== 'admin') { navigate('dashboard'); return; }
   var c = document.getElementById('content');
-  c.innerHTML = '<div class="card"><h3 class="card-title">Filtros do Relatório</h3><div class="filters"><input type="date" id="rIni"><input type="date" id="rFim"><input type="text" id="rCli" placeholder="Cliente"><input type="text" id="rPed" placeholder="Nº Pedido"><input type="text" id="rEnt" placeholder="Entregador"><input type="text" id="rSep" placeholder="Separador"></div><button class="btn" onclick="exportExcel()">📊 Exportar Excel</button> <button class="btn btn-danger" onclick="exportPDF()"> Exportar PDF</button></div><div class="card"><h3 class="card-title">Prévia</h3><div id="relPrev"></div></div>';
+  c.innerHTML = '<div class="card"><h3 class="card-title">Filtros do Relatório</h3><div class="filters"><input type="date" id="rIni"><input type="date" id="rFim"><input type="text" id="rCli" placeholder="Cliente"><input type="text" id="rPed" placeholder="Nº Pedido"><input type="text" id="rEnt" placeholder="Entregador"><input type="text" id="rSep" placeholder="Separador"></div><button class="btn" onclick="exportExcel()">📊 Exportar Excel</button> <button class="btn btn-danger" onclick="exportPDF()">📄 Exportar PDF</button></div><div class="card"><h3 class="card-title">Prévia</h3><div id="relPrev"></div></div>';
   updateRelPrev();
   ['rIni','rFim','rCli','rPed','rEnt','rSep'].forEach(function(id) { var el = document.getElementById(id); if (el) { el.addEventListener('input', updateRelPrev); el.addEventListener('change', updateRelPrev); } });
 }
@@ -1062,7 +1124,7 @@ function cadastrarClienteEPedido() {
   }
   
   if (camposFaltando.length > 0) {
-    alert('️ Preencha os campos:\n\n• ' + camposFaltando.join('\n• '));
+    alert('⚠️ Preencha os campos:\n\n• ' + camposFaltando.join('\n• '));
     toast('Preencha: ' + camposFaltando.join(', '), 'error');
     isProcessing = false;
     return;
@@ -1190,13 +1252,13 @@ function confirmarPedidoCadastrado(modo, foto) {
 async function openCamera(modo) {
   if (isProcessing) return;
   if (typeof Tesseract === 'undefined') {
-    showModal('<h2>⚠️ OCR Não Disponível</h2><p style="margin-bottom:15px; font-size:14px;">A biblioteca de reconhecimento de texto não foi carregada.</p><button class="btn btn-block" onclick="closeModal(); entradaManual(\'' + modo + '\')">️ Inserir Dados Manualmente</button><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Fechar</button></div>');
+    showModal('<h2>⚠️ OCR Não Disponível</h2><p style="margin-bottom:15px; font-size:14px;">A biblioteca de reconhecimento de texto não foi carregada.</p><button class="btn btn-block" onclick="closeModal(); entradaManual(\'' + modo + '\')">✏️ Inserir Dados Manualmente</button><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Fechar</button></div>');
     return;
   }
   currentCameraModo = modo;
   var isMobile = window.innerWidth <= 768;
   var overlayClass = isMobile ? 'modal-overlay camera-modal' : 'modal-overlay';
-  document.getElementById('modalContainer').innerHTML = '<div class="' + overlayClass + '" onclick="if(event.target===this)closeCamera()"><div class="modal"><h2>📷 ' + (modo === 'separacao' ? 'Fotografar Pedido' : 'Receber Pedido') + '</h2><div class="camera-wrapper"><div class="camera-container" id="camContainer"><div class="camera-hint">👆 Toque para fotografar</div><div class="camera-focus-ring" id="focusRing"></div><video id="camVideo" autoplay playsinline muted></video></div><div class="camera-controls"><button class="btn-capture" id="btnCapture" onclick="doCapture()">📷</button><button class="btn-cancel-cam" onclick="closeCamera()">✕ Cancelar</button></div><div id="ocrProgress" style="display:none;"><div class="ocr-progress"><div class="ocr-progress-bar" id="ocrBar" style="width:0%"></div></div></div><p id="ocrStatus" class="ocr-status" style="display:none;"></p></div></div></div>';
+  document.getElementById('modalContainer').innerHTML = '<div class="' + overlayClass + '" onclick="if(event.target===this)closeCamera()"><div class="modal"><h2> ' + (modo === 'separacao' ? 'Fotografar Pedido' : 'Receber Pedido') + '</h2><div class="camera-wrapper"><div class="camera-container" id="camContainer"><div class="camera-hint">👆 Toque para fotografar</div><div class="camera-focus-ring" id="focusRing"></div><video id="camVideo" autoplay playsinline muted></video></div><div class="camera-controls"><button class="btn-capture" id="btnCapture" onclick="doCapture()"></button><button class="btn-cancel-cam" onclick="closeCamera()">✕ Cancelar</button></div><div id="ocrProgress" style="display:none;"><div class="ocr-progress"><div class="ocr-progress-bar" id="ocrBar" style="width:0%"></div></div></div><p id="ocrStatus" class="ocr-status" style="display:none;"></p></div></div></div>';
   try {
     var stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280, max: 1920 }, height: { ideal: 720, max: 1080 } }, audio: false });
     cameraStream = stream;
@@ -1251,7 +1313,7 @@ async function capturePhoto(modo) {
     if (barcodeResult && barcodeResult.text) {
       var bn = barcodeResult.text.replace(/[^0-9]/g, '').slice(-8);
       var on = dados.numero ? dados.numero.replace(/[^0-9]/g, '').slice(-8) : '';
-      if (on && bn && on !== bn) { if (statusEl) statusEl.textContent = '⚠️ Divergência!'; await scanBarcodeOnly(foto, dados, modo); isProcessing = false; return; }
+      if (on && bn && on !== bn) { if (statusEl) statusEl.textContent = '️ Divergência!'; await scanBarcodeOnly(foto, dados, modo); isProcessing = false; return; }
       else if (bn && !on) { dados.numero = bn; }
     }
     
@@ -1279,8 +1341,8 @@ async function capturePhoto(modo) {
         '<div class="form-group"><label>Código do Cliente <span class="required">*</span></label><input id="ocrCod" value="' + dados.codigo + '"></div>' +
         '<div class="form-group"><label>Apelido <span class="required">*</span> <small style="color:var(--text-soft); font-weight:600;">(nome resumido)</small></label><input id="clienteApelido" placeholder="Ex: Munhoz"></div>' +
         '<div class="form-group"><label>Nome Completo <small style="color:var(--text-soft); font-weight:600;">(opcional)</small></label><input id="clienteNome" placeholder="Razão social"></div>' +
-        '<div class="endereco-section"><h4> Endereço</h4>' +
-          '<div class="form-group"><label>CEP</label><div class="cep-group"><input id="clienteCep" placeholder="00000-000" maxlength="9" oninput="formatarCep(this)"><button class="btn btn-sm" onclick="buscarCep()">🔍</button></div><div id="cepStatus" class="cep-status"></div></div>' +
+        '<div class="endereco-section"><h4>📍 Endereço</h4>' +
+          '<div class="form-group"><label>CEP</label><div class="cep-group"><input id="clienteCep" placeholder="00000-000" maxlength="9" oninput="formatarCep(this)"><button class="btn btn-sm" onclick="buscarCep()"></button></div><div id="cepStatus" class="cep-status"></div></div>' +
           '<div class="form-group"><label>Rua <span class="required">*</span></label><input id="clienteRua" placeholder="Preenchido pelo CEP"></div>' +
           '<div class="endereco-row"><div class="form-group"><label>Número <span class="required">*</span></label><input id="clienteNumero" placeholder="Nº"></div><div class="form-group"><label>Complemento</label><input id="clienteComplemento" placeholder="Sala, Apto..."></div></div>' +
           '<div class="form-group"><label>Bairro <span class="required">*</span></label><input id="clienteBairro" placeholder="Preenchido pelo CEP"></div>' +
@@ -1363,19 +1425,15 @@ function closeBarcodeScanner() { var v = document.getElementById('barcodeVideo')
 
 function entradaManual(modo) {
   fotoAtual = null; modoAtual = modo;
-  showModal('<h2>Inserir Manualmente</h2><div class="form-group"><label>Nº do Pedido <span class="required">*</span></label><input id="ocrNum"></div><div class="form-group"><label>Código <span class="required">*</span></label><input id="ocrCod"></div><div class="form-group"><label>Apelido <span class="required">*</span></label><input id="clienteApelido"></div><div class="form-group"><label>Nome Completo</label><input id="clienteNome"></div><div class="endereco-section"><h4>📍 Endereço</h4><div class="form-group"><label>CEP</label><div class="cep-group"><input id="clienteCep" maxlength="9" oninput="formatarCep(this)"><button class="btn btn-sm" onclick="buscarCep()">🔍</button></div><div id="cepStatus" class="cep-status"></div></div><div class="form-group"><label>Rua <span class="required">*</span></label><input id="clienteRua"></div><div class="endereco-row"><div class="form-group"><label>Número <span class="required">*</span></label><input id="clienteNumero"></div><div class="form-group"><label>Complemento</label><input id="clienteComplemento"></div></div><div class="form-group"><label>Bairro <span class="required">*</span></label><input id="clienteBairro"></div><div class="form-group"><label>Cidade - UF <span class="required">*</span></label><input id="clienteCidade"></div></div><div class="form-group"><label>CNPJ</label><input id="clienteCnpj"></div><div class="form-group"><label>Telefone</label><input id="clienteTelefone"></div><p style="font-size:12px; color:var(--text-soft); margin-bottom:15px;"><span class="required">*</span> = obrigatórios</p><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-success" onclick="cadastrarClienteEPedido()">✓ Confirmar</button></div>');
+  showModal('<h2>Inserir Manualmente</h2><div class="form-group"><label>Nº do Pedido <span class="required">*</span></label><input id="ocrNum"></div><div class="form-group"><label>Código <span class="required">*</span></label><input id="ocrCod"></div><div class="form-group"><label>Apelido <span class="required">*</span></label><input id="clienteApelido"></div><div class="form-group"><label>Nome Completo</label><input id="clienteNome"></div><div class="endereco-section"><h4> Endereço</h4><div class="form-group"><label>CEP</label><div class="cep-group"><input id="clienteCep" maxlength="9" oninput="formatarCep(this)"><button class="btn btn-sm" onclick="buscarCep()">🔍</button></div><div id="cepStatus" class="cep-status"></div></div><div class="form-group"><label>Rua <span class="required">*</span></label><input id="clienteRua"></div><div class="endereco-row"><div class="form-group"><label>Número <span class="required">*</span></label><input id="clienteNumero"></div><div class="form-group"><label>Complemento</label><input id="clienteComplemento"></div></div><div class="form-group"><label>Bairro <span class="required">*</span></label><input id="clienteBairro"></div><div class="form-group"><label>Cidade - UF <span class="required">*</span></label><input id="clienteCidade"></div></div><div class="form-group"><label>CNPJ</label><input id="clienteCnpj"></div><div class="form-group"><label>Telefone</label><input id="clienteTelefone"></div><p style="font-size:12px; color:var(--text-soft); margin-bottom:15px;"><span class="required">*</span> = obrigatórios</p><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-success" onclick="cadastrarClienteEPedido()">✓ Confirmar</button></div>');
 }
 
-/* ============ PARSER OCR - AJUSTADO ============ */
+/* ============ PARSER OCR ============ */
 function parseOCR(text) {
   var linhas = text.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
   var t = text.toUpperCase();
   var numero = '', data = '', codigo = '', cliente = '', endereco = '';
   
-  console.log('=== INÍCIO DO PARSER OCR ===');
-  console.log('Texto completo:', text);
-  
-  // 1. NÚMERO DO PEDIDO - Busca exata abaixo de "PEDIDO"
   var idxPedido = t.indexOf('PEDIDO');
   if (idxPedido >= 0) {
     var textoAposPedido = text.substring(idxPedido);
@@ -1383,13 +1441,10 @@ function parseOCR(text) {
     
     if (linhasAposPedido.length > 1) {
       var linhaNumero = linhasAposPedido[1];
-      console.log('Linha do número:', linhaNumero);
-      
       var mNumero = linhaNumero.match(/N[O0º°]\s*([0-9]+)/i);
       if (mNumero) {
         numero = mNumero[1].replace(/[^0-9]/g, '');
         if (numero.length > 8) numero = numero.slice(-8);
-        console.log('Número do pedido encontrado:', numero);
       }
       
       var mData = linhaNumero.match(/(\d{2}\/\d{2}\/\d{4})/);
@@ -1397,7 +1452,6 @@ function parseOCR(text) {
     }
   }
   
-  // 2. CÓDIGO E CLIENTE - Busca abaixo de "CUPOM SEM VALOR FISCAL"
   var idxCupom = t.indexOf('CUPOM SEM VALOR FISCAL');
   if (idxCupom < 0) idxCupom = t.indexOf('GUPOM SEM VALOR FISCAL');
   
@@ -1405,16 +1459,12 @@ function parseOCR(text) {
     var textoAposCupom = text.substring(idxCupom);
     var linhasAposCupom = textoAposCupom.split('\n').map(function(l) { return l.trim(); });
     
-    console.log('Linhas após CUPOM:', linhasAposCupom);
-    
     if (linhasAposCupom.length > 1) {
       var linhaCliente = linhasAposCupom[1];
-      console.log('Linha do cliente:', linhaCliente);
       
       var mCodigo = linhaCliente.match(/^(\d{2,5})\s*[-–—]/);
       if (mCodigo) {
         codigo = mCodigo[1];
-        console.log('Código do cliente encontrado:', codigo);
         
         var partes = linhaCliente.split(/[-–—]/);
         if (partes.length > 1) {
@@ -1425,13 +1475,11 @@ function parseOCR(text) {
                           .replace(/\s*EPP\s*$/i, '')
                           .replace(/[|&]/g, '')
                           .trim();
-          console.log('Nome do cliente:', cliente);
         }
       }
     }
   }
   
-  // 3. ENDEREÇO
   var mEnd = t.match(/(?:AVENTIDA|AVENIDA|AVENI0A|AV\s|RUA|ALAMEDA|ESTRADA|TRAVESSA)\s+[A-Z0-9\s,]+?\d{3,}/);
   if (mEnd) {
     endereco = mEnd[0].trim().replace(/[|&]/g, '').trim();
@@ -1454,14 +1502,6 @@ function parseOCR(text) {
     cliente = cliente.replace(/\s*LTDA\.?\s*$/i, '').replace(/\s*LIDA\.?\s*$/i, '').replace(/\s*ME\s*$/i, '').replace(/\s*EPP\s*$/i, '').replace(/[|&]/g, '').replace(/\s+/g, ' ').trim();
   }
   endereco = endereco.replace(/[|&]/g, '').replace(/\s+/g, ' ').trim();
-  
-  console.log('=== RESULTADO FINAL ===');
-  console.log('Número:', numero);
-  console.log('Data:', data);
-  console.log('Código:', codigo);
-  console.log('Cliente:', cliente);
-  console.log('Endereço:', endereco);
-  console.log('=== FIM DO PARSER ===');
   
   return { numero: numero, data: data, codigo: codigo, cliente: cliente, endereco: endereco };
 }
@@ -1489,7 +1529,6 @@ function initApp() {
   renderView(); 
 }
 
-// Inicialização
 loadTheme(); 
 loadDB();
 var savedUser = sessionStorage.getItem('currentUser');
