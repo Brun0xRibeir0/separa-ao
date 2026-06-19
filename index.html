@@ -135,6 +135,34 @@ button, input, select, textarea {
 .btn-secondary:hover { background: var(--border); }
 .btn-sm { padding: 8px 12px; font-size: 14px; min-height: 38px; }
 
+/* CHECKBOX */
+.checkbox-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 12px;
+  background: var(--surface-2);
+  border-radius: 8px;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+.checkbox-item input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  margin-right: 12px;
+  margin-top: 2px;
+}
+.checkbox-item .info {
+  flex: 1;
+}
+.checkbox-item .pedido-num {
+  font-weight: 800;
+  color: var(--primary);
+}
+.checkbox-item .pedido-cli {
+  font-size: 14px;
+  color: var(--text-soft);
+}
+
 /* LAYOUT */
 .app { display: flex; min-height: 100vh; }
 .sidebar {
@@ -428,17 +456,6 @@ tr:hover { background: var(--surface-2); }
   border-radius: 8px;
 }
 
-/* OCR STATUS */
-.ocr-status-box {
-  background: var(--surface-2);
-  padding: 15px;
-  border-radius: 8px;
-  margin-top: 15px;
-  text-align: center;
-}
-.ocr-status-box.error { background: #fee2e2; color: #991b1b; }
-.ocr-status-box.success { background: #d1fae5; color: #065f46; }
-
 /* RESPONSIVE */
 @media (max-width: 768px) {
   .sidebar {
@@ -478,7 +495,7 @@ tr:hover { background: var(--surface-2); }
     </div>
     <button class="btn btn-block" onclick="doLogin()">ENTRAR</button>
     <p style="margin-top:20px; font-size:12px; color:var(--text-soft); text-align:center;">
-      admin/admin • separador/123 • entregador/123
+      admin/admin • separador/123 • entregador/123 • vendedor/123
     </p>
   </div>
 </div>
@@ -511,23 +528,21 @@ tr:hover { background: var(--surface-2); }
 
 <script>
 /* ============ ESTADO ============ */
-const DB_KEY = 'sep_entrega_db_v3';
+const DB_KEY = 'sep_entrega_db_v4';
 let db = {
   users: [
     { id: 1, login: 'admin', pass: 'admin', nome: 'Administrador', funcao: 'admin', ativo: true },
     { id: 2, login: 'separador', pass: '123', nome: 'João Separador', funcao: 'separador', ativo: true },
-    { id: 3, login: 'entregador', pass: '123', nome: 'Pedro Entregador', funcao: 'entregador', ativo: true }
+    { id: 3, login: 'entregador', pass: '123', nome: 'Pedro Entregador', funcao: 'entregador', ativo: true },
+    { id: 4, login: 'vendedor', pass: '123', nome: 'Carlos Vendedor', funcao: 'vendedor', ativo: true }
   ],
   funcionarios: [],
-  veiculos: [],
   pedidos: [],
   logs: []
 };
 let currentUser = null;
 let currentView = 'dashboard';
 let cameraStream = null;
-let tesseractReady = false;
-let tesseractLoadAttempts = 0;
 
 /* ============ PERSISTÊNCIA ============ */
 function loadDB() {
@@ -592,22 +607,19 @@ function buildNav() {
   nav.innerHTML = '';
   document.getElementById('userInfo').innerHTML = '<b>' + currentUser.nome + '</b><br>' + currentUser.funcao.toUpperCase();
   
-  const items = [];
+  // Todos veem todas as telas
+  const items = [
+    { id: 'dashboard', icon: '📊', label: 'Dashboard' },
+    { id: 'separacao', icon: '📦', label: 'Separação' },
+    { id: 'entregas', icon: '🚚', label: 'Entregas' },
+    { id: 'historico', icon: '📜', label: 'Histórico' }
+  ];
+  
+  // Só admin vê usuários e funcionários
   if (currentUser.funcao === 'admin') {
-    items.push({ id: 'dashboard', icon: '📊', label: 'Dashboard' });
-    items.push({ id: 'separacao', icon: '📦', label: 'Separação' });
-    items.push({ id: 'entregas', icon: '🚚', label: 'Entregas' });
-    items.push({ id: 'historico', icon: '📜', label: 'Histórico' });
-    items.push({ id: 'funcionarios', icon: '', label: 'Funcionários' });
-    items.push({ id: 'veiculos', icon: '', label: 'Veículos' });
-    items.push({ id: 'usuarios', icon: '', label: 'Usuários' });
-    items.push({ id: 'relatorios', icon: '', label: 'Relatórios' });
-  } else if (currentUser.funcao === 'separador') {
-    items.push({ id: 'separacao', icon: '📦', label: 'Separação' });
-    items.push({ id: 'historico', icon: '📜', label: 'Meus Pedidos' });
-  } else if (currentUser.funcao === 'entregador') {
-    items.push({ id: 'entregas', icon: '🚚', label: 'Entregas' });
-    items.push({ id: 'historico', icon: '📜', label: 'Histórico' });
+    items.push({ id: 'funcionarios', icon: '👥', label: 'Funcionários' });
+    items.push({ id: 'usuarios', icon: '🔐', label: 'Usuários' });
+    items.push({ id: 'relatorios', icon: '📄', label: 'Relatórios' });
   }
   
   items.forEach(function(it) {
@@ -633,7 +645,6 @@ function renderView() {
     entregas: 'Tela de Entregas',
     historico: 'Histórico de Pedidos',
     funcionarios: 'Cadastro de Funcionários',
-    veiculos: 'Cadastro de Veículos',
     usuarios: 'Cadastro de Usuários',
     relatorios: 'Relatórios'
   };
@@ -644,7 +655,6 @@ function renderView() {
     entregas: renderEntregas,
     historico: renderHistorico,
     funcionarios: renderFuncionarios,
-    veiculos: renderVeiculos,
     usuarios: renderUsuarios,
     relatorios: renderRelatorios
   };
@@ -653,7 +663,6 @@ function renderView() {
 
 /* ============ DASHBOARD ============ */
 function renderDashboard() {
-  if (currentUser.funcao !== 'admin') { navigate('separacao'); return; }
   var hoje = new Date().toDateString();
   var sepHoje = db.pedidos.filter(function(p) { return new Date(p.dataSeparacao).toDateString() === hoje; }).length;
   var emEntrega = db.pedidos.filter(function(p) { return p.status === 'EM_ENTREGA'; }).length;
@@ -714,11 +723,15 @@ function renderDashboard() {
 /* ============ SEPARAÇÃO ============ */
 function renderSeparacao() {
   var c = document.getElementById('content');
+  var podeEditar = (currentUser.funcao === 'admin' || currentUser.funcao === 'separador');
+  
   c.innerHTML = 
     '<div class="card">' +
       '<h3 class="card-title">Nova Separação</h3>' +
-      '<p style="margin-bottom:15px; color:var(--text-soft);">Clique para fotografar o pedido impresso. O OCR irá identificar os dados automaticamente.</p>' +
-      '<button class="btn btn-block" onclick="openCamera(\'separacao\')">📷 FOTOGRAFAR PEDIDO</button>' +
+      (podeEditar ? 
+        '<p style="margin-bottom:15px; color:var(--text-soft);">Clique para fotografar o pedido impresso. O OCR irá identificar os dados automaticamente.</p>' +
+        '<button class="btn btn-block" onclick="openCamera(\'separacao\')">📷 FOTOGRAFAR PEDIDO</button>' 
+        : '<p style="color:var(--text-soft);">Apenas separadores podem criar novas separações.</p>') +
     '</div>' +
     '<div class="card">' +
       '<h3 class="card-title">Pedidos Separados</h3>' +
@@ -739,7 +752,6 @@ function renderSepList() {
   var data = document.getElementById('fSepData') ? document.getElementById('fSepData').value : '';
   
   var lista = db.pedidos.filter(function(p) { return p.status === 'SEPARADO'; });
-  if (currentUser.funcao === 'separador') lista = lista.filter(function(p) { return p.separadorId === currentUser.id; });
   if (num) lista = lista.filter(function(p) { return (p.numero || '').toLowerCase().indexOf(num) >= 0; });
   if (cli) lista = lista.filter(function(p) { return (p.cliente || '').toLowerCase().indexOf(cli) >= 0; });
   if (sep) lista = lista.filter(function(p) { return (p.separador || '').toLowerCase().indexOf(sep) >= 0; });
@@ -755,41 +767,95 @@ function renderSepList() {
   document.getElementById('sepList').innerHTML = html;
 }
 
-/* ============ ENTREGAS ============ */
+/* ============ ENTREGAS - SELEÇÃO DE PEDIDOS ============ */
 function renderEntregas() {
   var c = document.getElementById('content');
-  var lista = db.pedidos.filter(function(p) { return p.status === 'EM_ENTREGA'; });
-  if (currentUser.funcao === 'entregador') lista = lista.filter(function(p) { return p.entregadorId === currentUser.id; });
+  var podeEditar = (currentUser.funcao === 'admin' || currentUser.funcao === 'entregador');
+  
+  // Lista de pedidos SEPARADOS para o entregador selecionar
+  var pedidosDisponiveis = db.pedidos.filter(function(p) { return p.status === 'SEPARADO'; });
   
   c.innerHTML = 
     '<div class="card">' +
-      '<h3 class="card-title">Pedidos em Entrega (' + lista.length + ')</h3>' +
-      '<div class="table-wrap"><table>' +
-        '<thead><tr><th>Pedido</th><th>Cliente</th><th>Endereço</th><th>Retirada</th><th>Entregador</th><th>Status</th><th>Ações</th></tr></thead>' +
-        '<tbody>' +
-          (lista.length ? lista.map(function(p) {
-            return '<tr><td>' + p.numero + '</td><td>' + p.cliente + '</td><td>' + (p.endereco || '-') + '</td><td>' + formatDT(p.dataRetirada) + '</td><td>' + p.entregador + '</td><td><span class="badge badge-em-entrega">EM ENTREGA</span></td><td><button class="btn btn-sm" onclick="verFotos(' + p.id + ')"></button> <button class="btn btn-sm btn-success" onclick="marcarEntregue(' + p.id + ')">✓</button> <button class="btn btn-sm btn-danger" onclick="marcarProblema(' + p.id + ')">!</button></td></tr>';
-          }).join('') : '<tr><td colspan="7" style="text-align:center;">Nenhum pedido em entrega</td></tr>') +
-        '</tbody></table></div>' +
+      '<h3 class="card-title">Selecionar Pedidos para Entrega</h3>' +
+      (podeEditar ? 
+        '<p style="margin-bottom:15px; color:var(--text-soft);">Selecione os pedidos que você vai entregar e clique em "Confirmar Retirada"</p>' +
+        '<div id="listaPedidosSelecao">' + renderListaSelecao(pedidosDisponiveis) + '</div>' +
+        '<button class="btn btn-success btn-block" onclick="confirmarRetiradaPedidos()" style="margin-top:15px;">✓ Confirmar Retirada dos Selecionados</button>'
+        : '<p style="color:var(--text-soft);">Apenas entregadores podem retirar pedidos.</p>') +
     '</div>' +
-    (currentUser.funcao === 'entregador' ? 
     '<div class="card">' +
-      '<h3 class="card-title">Receber Novo Pedido</h3>' +
-      '<p style="margin-bottom:15px; color:var(--text-soft);">Fotografe o pedido para dar baixa na separação e iniciar a entrega.</p>' +
-      '<button class="btn btn-block btn-warning" onclick="openCamera(\'recebimento\')">📷 RECEBER PEDIDO</button>' +
-    '</div>' : '');
+      '<h3 class="card-title">Pedidos em Entrega</h3>' +
+      '<div id="listaEntregas"></div>' +
+    '</div>';
+  renderListaEntregas();
 }
+
+function renderListaSelecao(pedidos) {
+  if (!pedidos.length) return '<p style="color:var(--text-soft);">Nenhum pedido disponível para entrega</p>';
+  
+  var html = '';
+  pedidos.forEach(function(p) {
+    html += '<label class="checkbox-item">' +
+      '<input type="checkbox" value="' + p.id + '" class="chk-pedido">' +
+      '<div class="info">' +
+        '<div class="pedido-num">Pedido: ' + p.numero + '</div>' +
+        '<div class="pedido-cli">' + p.cliente + '</div>' +
+        '<div class="pedido-cli">' + (p.endereco || '-') + '</div>' +
+      '</div>' +
+    '</label>';
+  });
+  return html;
+}
+
+function confirmarRetiradaPedidos() {
+  var checkboxes = document.querySelectorAll('.chk-pedido:checked');
+  if (!checkboxes.length) {
+    toast('Selecione pelo menos um pedido', 'warning');
+    return;
+  }
+  
+  var count = 0;
+  checkboxes.forEach(function(chk) {
+    var p = db.pedidos.find(function(x) { return x.id === parseInt(chk.value); });
+    if (p && p.status === 'SEPARADO') {
+      p.status = 'EM_ENTREGA';
+      p.entregador = currentUser.nome;
+      p.entregadorId = currentUser.id;
+      p.dataRetirada = new Date().toISOString();
+      p.fotoRetirada = null; // Entregador não tira foto
+      count++;
+    }
+  });
+  
+  saveDB();
+  toast(count + ' pedido(s) retirado(s) com sucesso', 'success');
+  renderEntregas();
+}
+
+function renderListaEntregas() {
+  var lista = db.pedidos.filter(function(p) { return p.status === 'EM_ENTREGA'; });
+  
+  var html = '<div class="table-wrap"><table>' +
+    '<thead><tr><th>Pedido</th><th>Cliente</th><th>Endereço</th><th>Retirada</th><th>Entregador</th><th>Status</th><th>Ações</th></tr></thead>' +
+    '<tbody>' +
+      (lista.length ? lista.map(function(p) {
+        return '<tr><td>' + p.numero + '</td><td>' + p.cliente + '</td><td>' + (p.endereco || '-') + '</td><td>' + formatDT(p.dataRetirada) + '</td><td>' + p.entregador + '</td><td><span class="badge badge-em-entrega">EM ENTREGA</span></td><td><button class="btn btn-sm" onclick="verFotos(' + p.id + ')">📷</button> <button class="btn btn-sm btn-success" onclick="marcarEntregue(' + p.id + ')">✓</button> <button class="btn btn-sm btn-danger" onclick="marcarProblema(' + p.id + ')">!</button></td></tr>';
+      }).join('') : '<tr><td colspan="7" style="text-align:center;">Nenhum pedido em entrega</td></tr>') +
+    '</tbody></table></div>';
+  document.getElementById('listaEntregas').innerHTML = html;
+}
+
 function marcarEntregue(id) {
   var p = db.pedidos.find(function(x) { return x.id === id; });
   if (!p) return;
   p.status = 'ENTREGUE';
   p.dataEntrega = new Date().toISOString();
-  p.entregador = currentUser.nome;
-  p.entregadorId = currentUser.id;
   saveDB();
   toast('Pedido marcado como ENTREGUE', 'success');
-  renderEntregas();
+  renderListaEntregas();
 }
+
 function marcarProblema(id) {
   var p = db.pedidos.find(function(x) { return x.id === id; });
   if (!p) return;
@@ -800,7 +866,7 @@ function marcarProblema(id) {
   p.dataProblema = new Date().toISOString();
   saveDB();
   toast('Problema registrado', 'warning');
-  renderEntregas();
+  renderListaEntregas();
 }
 
 /* ============ HISTÓRICO ============ */
@@ -834,8 +900,6 @@ function renderHistList() {
   var st = document.getElementById('fHistStatus') ? document.getElementById('fHistStatus').value : '';
   
   var lista = db.pedidos.slice();
-  if (currentUser.funcao === 'separador') lista = lista.filter(function(p) { return p.separadorId === currentUser.id; });
-  if (currentUser.funcao === 'entregador') lista = lista.filter(function(p) { return p.entregadorId === currentUser.id; });
   if (num) lista = lista.filter(function(p) { return (p.numero || '').toLowerCase().indexOf(num) >= 0; });
   if (cli) lista = lista.filter(function(p) { return (p.cliente || '').toLowerCase().indexOf(cli) >= 0; });
   if (ini) lista = lista.filter(function(p) { return p.dataSeparacao && p.dataSeparacao >= ini; });
@@ -886,6 +950,7 @@ function verFotos(id) {
 
 /* ============ FUNCIONÁRIOS ============ */
 function renderFuncionarios() {
+  if (currentUser.funcao !== 'admin') { navigate('dashboard'); return; }
   var c = document.getElementById('content');
   c.innerHTML = 
     '<div class="card">' +
@@ -906,7 +971,7 @@ function formFuncionario(id) {
     '<h2>' + (id ? 'Editar' : 'Novo') + ' Funcionário</h2>' +
     '<div class="form-group"><label>Nome Completo</label><input id="fNome" value="' + (f.nome || '') + '"></div>' +
     '<div class="form-group"><label>Matrícula</label><input id="fMat" value="' + (f.matricula || '') + '"></div>' +
-    '<div class="form-group"><label>Função</label><select id="fFun"><option value="separador"' + (f.funcao==='separador'?' selected':'') + '>Separador</option><option value="entregador"' + (f.funcao==='entregador'?' selected':'') + '>Entregador</option><option value="administrativo"' + (f.funcao==='administrativo'?' selected':'') + '>Administrativo</option></select></div>' +
+    '<div class="form-group"><label>Função</label><select id="fFun"><option value="separador"' + (f.funcao==='separador'?' selected':'') + '>Separador</option><option value="entregador"' + (f.funcao==='entregador'?' selected':'') + '>Entregador</option><option value="vendedor"' + (f.funcao==='vendedor'?' selected':'') + '>Vendedor</option><option value="administrativo"' + (f.funcao==='administrativo'?' selected':'') + '>Administrativo</option></select></div>' +
     '<div class="form-group"><label>Telefone</label><input id="fTel" value="' + (f.telefone || '') + '"></div>' +
     '<div class="form-group"><label>Status</label><select id="fAtivo"><option value="true"' + (f.ativo?' selected':'') + '>Ativo</option><option value="false"' + (!f.ativo?' selected':'') + '>Inativo</option></select></div>' +
     '<div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-success" onclick="saveFuncionario(' + (id || 'null') + ')">Salvar</button></div>'
@@ -938,60 +1003,9 @@ function delFuncionario(id) {
   toast('Funcionário excluído', 'success');
 }
 
-/* ============ VEÍCULOS ============ */
-function renderVeiculos() {
-  var c = document.getElementById('content');
-  c.innerHTML = 
-    '<div class="card">' +
-      '<h3 class="card-title">Veículos</h3>' +
-      '<button class="btn" onclick="formVeiculo()">+ Novo Veículo</button>' +
-      '<div class="table-wrap" style="margin-top:15px;"><table>' +
-        '<thead><tr><th>Placa</th><th>Modelo</th><th>Motorista</th><th>Status</th><th>Ações</th></tr></thead>' +
-        '<tbody>' +
-          (db.veiculos.map(function(v) {
-            return '<tr><td>' + v.placa + '</td><td>' + v.modelo + '</td><td>' + (v.motorista || '-') + '</td><td><span class="badge ' + (v.ativo ? 'badge-entregue' : 'badge-problema') + '">' + (v.ativo ? 'ATIVO' : 'INATIVO') + '</span></td><td><button class="btn btn-sm" onclick="formVeiculo(' + v.id + ')">✏</button> <button class="btn btn-sm btn-danger" onclick="delVeiculo(' + v.id + ')">🗑</button></td></tr>';
-          }).join('') || '<tr><td colspan="5" style="text-align:center;">Nenhum veículo</td></tr>') +
-        '</tbody></table></div>' +
-    '</div>';
-}
-function formVeiculo(id) {
-  var v = id ? db.veiculos.find(function(x) { return x.id === id; }) : { placa: '', modelo: '', motorista: '', ativo: true };
-  showModal(
-    '<h2>' + (id ? 'Editar' : 'Novo') + ' Veículo</h2>' +
-    '<div class="form-group"><label>Placa</label><input id="vPlaca" value="' + (v.placa || '') + '"></div>' +
-    '<div class="form-group"><label>Modelo</label><input id="vModelo" value="' + (v.modelo || '') + '"></div>' +
-    '<div class="form-group"><label>Motorista</label><input id="vMot" value="' + (v.motorista || '') + '"></div>' +
-    '<div class="form-group"><label>Status</label><select id="vAtivo"><option value="true"' + (v.ativo?' selected':'') + '>Ativo</option><option value="false"' + (!v.ativo?' selected':'') + '>Inativo</option></select></div>' +
-    '<div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-success" onclick="saveVeiculo(' + (id || 'null') + ')">Salvar</button></div>'
-  );
-}
-function saveVeiculo(id) {
-  var data = {
-    placa: document.getElementById('vPlaca').value.trim(),
-    modelo: document.getElementById('vModelo').value.trim(),
-    motorista: document.getElementById('vMot').value.trim(),
-    ativo: document.getElementById('vAtivo').value === 'true'
-  };
-  if (!data.placa || !data.modelo) { toast('Preencha placa e modelo', 'error'); return; }
-  if (id) {
-    var v = db.veiculos.find(function(x) { return x.id === id; });
-    Object.assign(v, data);
-  } else {
-    data.id = Date.now();
-    db.veiculos.push(data);
-  }
-  saveDB(); closeModal(); renderVeiculos();
-  toast('Veículo salvo', 'success');
-}
-function delVeiculo(id) {
-  if (!confirm('Excluir veículo?')) return;
-  db.veiculos = db.veiculos.filter(function(x) { return x.id !== id; });
-  saveDB(); renderVeiculos();
-  toast('Veículo excluído', 'success');
-}
-
 /* ============ USUÁRIOS ============ */
 function renderUsuarios() {
+  if (currentUser.funcao !== 'admin') { navigate('dashboard'); return; }
   var c = document.getElementById('content');
   c.innerHTML = 
     '<div class="card">' +
@@ -1007,13 +1021,13 @@ function renderUsuarios() {
     '</div>';
 }
 function formUsuario(id) {
-  var u = id ? db.users.find(function(x) { return x.id === id; }) : { login: '', pass: '', nome: '', funcao: 'separador', ativo: true };
+  var u = id ? db.users.find(function(x) { return x.id === id; }) : { login: '', pass: '', nome: '', funcao: 'vendedor', ativo: true };
   showModal(
     '<h2>' + (id ? 'Editar' : 'Novo') + ' Usuário</h2>' +
     '<div class="form-group"><label>Login</label><input id="uLogin" value="' + (u.login || '') + '"></div>' +
     '<div class="form-group"><label>Senha</label><input id="uPass" value="' + (u.pass || '') + '"></div>' +
     '<div class="form-group"><label>Nome</label><input id="uNome" value="' + (u.nome || '') + '"></div>' +
-    '<div class="form-group"><label>Função</label><select id="uFun"><option value="admin"' + (u.funcao==='admin'?' selected':'') + '>Administrador</option><option value="separador"' + (u.funcao==='separador'?' selected':'') + '>Separador</option><option value="entregador"' + (u.funcao==='entregador'?' selected':'') + '>Entregador</option></select></div>' +
+    '<div class="form-group"><label>Função</label><select id="uFun"><option value="admin"' + (u.funcao==='admin'?' selected':'') + '>Administrador</option><option value="separador"' + (u.funcao==='separador'?' selected':'') + '>Separador</option><option value="entregador"' + (u.funcao==='entregador'?' selected':'') + '>Entregador</option><option value="vendedor"' + (u.funcao==='vendedor'?' selected':'') + '>Vendedor</option></select></div>' +
     '<div class="form-group"><label>Status</label><select id="uAtivo"><option value="true"' + (u.ativo?' selected':'') + '>Ativo</option><option value="false"' + (!u.ativo?' selected':'') + '>Inativo</option></select></div>' +
     '<div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-success" onclick="saveUsuario(' + (id || 'null') + ')">Salvar</button></div>'
   );
@@ -1046,6 +1060,7 @@ function delUsuario(id) {
 
 /* ============ RELATÓRIOS ============ */
 function renderRelatorios() {
+  if (currentUser.funcao !== 'admin') { navigate('dashboard'); return; }
   var c = document.getElementById('content');
   c.innerHTML = 
     '<div class="card">' +
@@ -1145,24 +1160,10 @@ function exportPDF() {
 
 /* ============ CÂMERA / OCR ============ */
 async function openCamera(modo) {
-  // Verificar se Tesseract está disponível
   if (typeof Tesseract === 'undefined') {
     showModal(
       '<h2>⚠️ OCR Não Disponível</h2>' +
-      '<p style="margin-bottom:15px;">A biblioteca de reconhecimento de texto não foi carregada. Isso pode acontecer por:</p>' +
-      '<ul style="margin-bottom:15px; padding-left:20px;">' +
-        '<li>Problema de conexão com a internet</li>' +
-        '<li>Bloqueio do navegador ao CDN</li>' +
-        '<li>Cache do navegador desatualizado</li>' +
-      '</ul>' +
-      '<p style="margin-bottom:15px;"><b>Soluções:</b></p>' +
-      '<ol style="margin-bottom:15px; padding-left:20px;">' +
-        '<li>Recarregue a página (F5 ou arraste para baixo)</li>' +
-        '<li>Verifique sua conexão com a internet</li>' +
-        '<li>Limpe o cache do navegador</li>' +
-        '<li>Tente outro navegador (Chrome recomendado)</li>' +
-      '</ol>' +
-      '<p style="margin-bottom:15px;"><b>Alternativa:</b> Você pode inserir os dados manualmente clicando abaixo:</p>' +
+      '<p style="margin-bottom:15px;">A biblioteca de reconhecimento de texto não foi carregada.</p>' +
       '<button class="btn btn-block" onclick="closeModal(); entradaManual(\'' + modo + '\')">✏️ Inserir Dados Manualmente</button>' +
       '<div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Fechar</button></div>'
     );
@@ -1175,7 +1176,7 @@ async function openCamera(modo) {
       '<video id="camVideo" autoplay playsinline></video>' +
     '</div>' +
     '<div class="camera-actions">' +
-      '<button class="btn btn-success" onclick="capturePhoto(\'' + modo + '\')"> Capturar</button>' +
+      '<button class="btn btn-success" onclick="capturePhoto(\'' + modo + '\')">📷 Capturar</button>' +
       '<button class="btn btn-secondary" onclick="closeCamera()">Cancelar</button>' +
     '</div>' +
     '<div id="ocrProgress" style="margin-top:15px;"></div>' +
@@ -1298,101 +1299,48 @@ function confirmarManual(modo) {
     toast('Pedido separado com sucesso', 'success');
     closeModal();
     renderSeparacao();
-  } else if (modo === 'recebimento') {
-    var p = db.pedidos.find(function(x) { return x.numero === numero && x.status === 'SEPARADO'; });
-    if (!p) { toast('Pedido não encontrado ou já retirado', 'error'); return; }
-    p.status = 'EM_ENTREGA';
-    p.entregador = currentUser.nome;
-    p.entregadorId = currentUser.id;
-    p.dataRetirada = new Date().toISOString();
-    p.fotoRetirada = null;
-    saveDB();
-    toast('Pedido recebido para entrega', 'success');
-    closeModal();
-    renderEntregas();
   }
 }
 
-/* ============ PARSER OCR - FORMATO DO PEDIDO ============ */
-/* ============ PARSER OCR - VERSÃO CORRIGIDA ============ */
 /* ============ PARSER OCR - TOLERANTE A ERROS ============ */
 function parseOCR(text) {
   var linhas = text.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
   var t = text.toUpperCase();
   var numero = '', data = '', codigo = '', cliente = '', endereco = '';
   
-  // ========== 1. NÚMERO DO PEDIDO ==========
-  // Busca padrão flexível: "ABERIO - No 0000164381 - 18/06/2026"
-  // Tolerante a: ABERIO/ABERTO/ABERT0, No/Nº/N0/NO
+  // 1. NÚMERO DO PEDIDO
   var mPedido = t.match(/(?:ABERIO|ABERTO|ABERT0|PEDIDO)\s*[-–]?\s*N[O0º°]?\s*([0-9]{6,})/);
   if (mPedido) {
-    numero = mPedido[1].slice(-8); // últimos 8 dígitos
+    numero = mPedido[1].slice(-8);
   }
-  // Fallback: qualquer sequência de 6+ dígitos após "NO" ou "Nº"
   if (!numero) {
     var mFallback = t.match(/N[O0º°]\s*([0-9]{6,})/);
     if (mFallback) numero = mFallback[1].slice(-8);
   }
   
-  // ========== 2. DATA DO PEDIDO ==========
+  // 2. DATA
   var mData = t.match(/(\d{2}\/\d{2}\/\d{4})/);
   if (mData) data = mData[1];
   
-  // ========== 3. ENCONTRAR O CLIENTE ==========
-  // Estrutura: após "PEDIDO" e a linha da data, vem o cliente
-  // Padrão: "563 - MUNHOZ ACESSORIOS PARA ESTOFADOS"
-  // Tolerante a: GUPOM/CUPOM, traço normal ou hífen
-  
-  // Procurar linha com padrão: NÚMERO - NOME DO CLIENTE
-  // Ex: "563 - MUNHOZ ACESSORIOS PARA ESTOFADOS"
-  // ou "563 — MUNHOZ..." (traço longo)
+  // 3. CLIENTE
   for (var i = 0; i < linhas.length; i++) {
     var linha = linhas[i].toUpperCase();
-    // Procura linha que começa com números seguidos de traço
     var mCliente = linha.match(/^(\d{2,5})\s*[-–—]\s*(.+)/);
     if (mCliente) {
       codigo = mCliente[1];
       cliente = mCliente[2].trim();
-      // Remover LTDA/LIDA/ME do final (pode estar quebrado)
       cliente = cliente.replace(/\s*(?:LTDA|LIDA|ME|EPP)\s*$/i, '').trim();
       break;
     }
   }
   
-  // Se não achou pelo padrão acima, procurar após "GUPOM" ou "CUPOM"
-  if (!cliente) {
-    for (var i = 0; i < linhas.length; i++) {
-      if (linhas[i].toUpperCase().match(/(?:GUPOM|CUPOM|CUP0M)\s+SEM\s+VALOR/)) {
-        // Próxima linha não vazia é o cliente
-        for (var j = i + 1; j < linhas.length; j++) {
-          if (linhas[j].trim().length > 0) {
-            var mCod2 = linhas[j].match(/^(\d{2,5})\s*[-–]\s*(.+)/);
-            if (mCod2) {
-              codigo = mCod2[1];
-              cliente = mCod2[2].trim().replace(/\s*(?:LTDA|LIDA|ME)\s*$/i, '').trim();
-            } else {
-              cliente = linhas[j].trim();
-            }
-            break;
-          }
-        }
-        break;
-      }
-    }
-  }
-  
-  // ========== 4. ENDEREÇO ==========
-  // Tolerante a: AVENTIDA/AVENIDA/AVENIDA/AV
-  var mEndereco = t.match(/(?:AVENTIDA|AVENIDA|AVENI0A|AV\s)\s+([A-Z0-9\s,]+(?:\d{3,}))/);
+  // 4. ENDEREÇO
+  var mEndereco = t.match(/(?:AVENTIDA|AVENIDA|AVENI0A|AV\s|RUA)\s+([A-Z0-9\s,]+(?:\d{3,}))/);
   if (mEndereco) {
-    endereco = mEndereco[0].trim();
-    // Limpar caracteres estranhos
-    endereco = endereco.replace(/[|]/g, '').trim();
+    endereco = mEndereco[0].trim().replace(/[|]/g, '').trim();
   }
   
-  // ========== 5. COMPLEMENTAR ENDEREÇO COM CIDADE ==========
-  // Procurar linha com cidade - estado
-  // Ex: "VOTUPORANGA - SP - (17) 3421-5328"
+  // 5. CIDADE
   var mCidade = t.match(/([A-ZÁÉÍÓÚÂÊÔÃÕÇ\s]{3,})\s*[-–]\s*([A-Z]{2})\s*[-–]?\s*\(?\d{2}\)?\s*[\d\-]{7,}/);
   if (mCidade && endereco) {
     var cidade = mCidade[1].trim();
@@ -1400,34 +1348,21 @@ function parseOCR(text) {
     endereco = endereco + ' / ' + cidade + ' - ' + estado;
   }
   
-  // ========== 6. CEP ==========
+  // 6. CEP
   var mCep = t.match(/CEP[:\s]*([0-9]{5}-?[0-9]{3})/);
   if (mCep && endereco) {
     endereco += ' / CEP: ' + mCep[1];
   }
   
-  // ========== LIMPEZA FINAL ==========
+  // LIMPEZA
   if (cliente) {
-    cliente = cliente.replace(/\s*LTDA\.?\s*$/i, '')
-                     .replace(/\s*LIDA\.?\s*$/i, '')
-                     .replace(/\s*ME\s*$/i, '')
-                     .replace(/\s*EPP\s*$/i, '')
-                     .replace(/[|]/g, '')
-                     .trim();
+    cliente = cliente.replace(/\s*LTDA\.?\s*$/i, '').replace(/\s*LIDA\.?\s*$/i, '').replace(/\s*ME\s*$/i, '').replace(/[|]/g, '').trim();
   }
-  
   endereco = endereco.replace(/[|]/g, '').trim();
   
-  console.log('OCR Parseado:', { numero: numero, data: data, codigo: codigo, cliente: cliente, endereco: endereco });
-  
-  return { 
-    numero: numero, 
-    data: data, 
-    codigo: codigo, 
-    cliente: cliente, 
-    endereco: endereco 
-  };
+  return { numero: numero, data: data, codigo: codigo, cliente: cliente, endereco: endereco };
 }
+
 function confirmarPedido(modo, foto) {
   var numero = document.getElementById('ocrNum').value.trim();
   var dataPed = document.getElementById('ocrData').value.trim();
@@ -1456,18 +1391,6 @@ function confirmarPedido(modo, foto) {
     toast('Pedido separado com sucesso', 'success');
     closeModal();
     renderSeparacao();
-  } else if (modo === 'recebimento') {
-    var p = db.pedidos.find(function(x) { return x.numero === numero && x.status === 'SEPARADO'; });
-    if (!p) { toast('Pedido não encontrado ou já retirado', 'error'); return; }
-    p.status = 'EM_ENTREGA';
-    p.entregador = currentUser.nome;
-    p.entregadorId = currentUser.id;
-    p.dataRetirada = new Date().toISOString();
-    p.fotoRetirada = foto;
-    saveDB();
-    toast('Pedido recebido para entrega', 'success');
-    closeModal();
-    renderEntregas();
   }
 }
 
@@ -1489,7 +1412,7 @@ function formatDT(iso) {
 
 /* ============ INIT ============ */
 function initApp() {
-  currentView = currentUser.funcao === 'admin' ? 'dashboard' : (currentUser.funcao === 'separador' ? 'separacao' : 'entregas');
+  currentView = 'dashboard';
   buildNav();
   renderView();
 }
@@ -1505,29 +1428,6 @@ if (savedUser) {
     initApp();
   } catch(e) {}
 }
-
-// Verificar Tesseract após carregamento
-window.addEventListener('load', function() {
-  setTimeout(function() {
-    if (typeof Tesseract !== 'undefined') {
-      tesseractReady = true;
-      console.log('Tesseract.js carregado com sucesso');
-    } else {
-      console.warn('Tesseract.js não carregou');
-      tesseractLoadAttempts++;
-      // Tentar carregar de outro CDN
-      if (tesseractLoadAttempts < 3) {
-        var script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@4.1.1/dist/tesseract.min.js';
-        script.onload = function() {
-          tesseractReady = true;
-          console.log('Tesseract.js carregado via fallback');
-        };
-        document.head.appendChild(script);
-      }
-    }
-  }, 2000);
-});
 </script>
 </body>
 </html>
